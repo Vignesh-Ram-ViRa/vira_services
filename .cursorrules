@@ -1,0 +1,299 @@
+# Vira Services - Cursor AI Rules
+
+## Static Content
+- Externalize all static content (such as text, labels, and messages) in a language.json file. Do not include any static content directly in component files.
+- Store all URLs and asset references in dedicated constants files. Components must not contain hardcoded URLs or asset paths.
+
+
+You are working on the **Vira Services** project - a centralized Spring Boot backend repository that serves multiple mini-projects with shared JWT authentication and PostgreSQL database.
+
+## 🎯 Project Context
+
+- **Architecture**: Multi-service Spring Boot backend with shared authentication
+- **Database**: Single PostgreSQL instance for all services
+- **Authentication**: JWT-based with refresh tokens
+- **Deployment**: Railway platform (free tier)
+- **Frontend**: React integration with comprehensive API service layer
+- **Scale**: Personal use, maximum 5 users
+- **Testing**: Comprehensive coverage required (minimum 80%)
+
+## 📁 Project Structure
+
+```
+vira-services/
+├── src/main/java/com/vira/
+│   ├── ViraServicesApplication.java
+│   ├── config/                   # Security, JWT, CORS configs
+│   ├── common/                   # Shared utilities & DTOs
+│   ├── auth/                     # Authentication service
+│   └── {service}/                # Individual services (portfolio, finance, etc.)
+│       ├── controller/
+│       ├── service/
+│       ├── repository/
+│       ├── model/
+│       └── dto/
+├── src/main/resources/
+│   ├── application*.yml          # Environment configurations
+│   └── db/migration/             # Flyway database migrations
+└── src/test/java/                # Comprehensive test suite
+```
+
+## 🔧 Coding Standards
+
+### Java/Spring Boot Standards
+- **Package Structure**: Follow `com.vira.{service}.{layer}` pattern
+- **Naming**: Use descriptive, full words (no abbreviations)
+- **Controllers**: End with `Controller` suffix
+- **Services**: End with `Service` suffix  
+- **Repositories**: End with `Repository` suffix
+- **DTOs**: Use `Request`/`Response` suffixes
+- **Models/Entities**: Use singular nouns
+
+### Database Standards
+- **Table Naming**: `{service}_{table}` pattern (e.g., `auth_users`, `portfolio_projects`)
+- **Column Naming**: Use snake_case
+- **Primary Keys**: Always use `id BIGSERIAL PRIMARY KEY`
+- **Timestamps**: Include `created_at` and `updated_at` with defaults
+- **Foreign Keys**: Reference format: `{table}_id BIGINT REFERENCES {table}(id)`
+
+### API Standards
+- **Base URLs**: `/api/{service}/` pattern
+- **HTTP Methods**: Standard REST conventions (GET, POST, PUT, DELETE)
+- **Response Format**: Consistent JSON structure with ApiResponse wrapper
+- **Error Handling**: Global exception handler with proper HTTP status codes
+- **CORS**: Configure for `http://localhost:3000` and production domains
+
+## 🧪 Testing Requirements (MANDATORY)
+
+### Coverage Requirements
+- **Minimum 80% code coverage** for all services
+- **Unit tests** for all service classes with mocked dependencies
+- **Integration tests** for all API endpoints with real database
+- **Repository tests** for all database operations
+- **Security tests** for authentication and authorization
+
+### Test Structure
+```
+src/test/java/com/vira/{service}/
+├── controller/
+│   ├── {Service}ControllerTest.java           # Unit tests
+│   └── {Service}ControllerIntegrationTest.java # Integration tests
+├── service/
+│   └── {Service}ServiceTest.java
+└── repository/
+    └── {Entity}RepositoryTest.java
+```
+
+### Test Naming Convention
+- **Unit Tests**: `should{ExpectedBehavior}When{StateUnderTest}`
+- **Integration Tests**: `should{ExpectedBehavior}When{ApiCall}`
+- **Test Categories**: Use `@Tag("unit")` and `@Tag("integration")`
+
+### Mock vs Real Dependencies
+- **Unit Tests**: Mock ALL external dependencies using `@Mock` or `@MockBean`
+- **Integration Tests**: Use real database with `@DataJpaTest` or `@SpringBootTest`
+- **Security Tests**: Use `@WithMockUser` for authentication scenarios
+
+## 🔐 Security Standards
+
+### Authentication Implementation
+- **JWT Tokens**: Access tokens (15 min) + Refresh tokens (7 days)
+- **Password Security**: BCrypt hashing with minimum 8 characters
+- **Role-Based Access**: Implement with `@PreAuthorize` annotations
+- **Token Storage**: HttpOnly cookies for production, localStorage for development
+
+### Security Configuration
+- **CORS**: Configure allowed origins, headers, and methods
+- **CSRF**: Disabled for stateless JWT authentication
+- **Headers**: Set security headers (Content-Type, X-Frame-Options, etc.)
+- **Validation**: Use `@Valid` and custom validators for all inputs
+
+## 🎨 UI/UX Preferences
+
+### Data Management
+- **Mock Data**: Store usernames, passwords, prefilled data in separate constants file
+- **No Hardcoding**: Never hardcode text strings or mock data in components
+
+## 📦 Dependencies & Tools
+
+### Required Dependencies
+```xml
+<!-- Core Spring Boot -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+
+<!-- Database -->
+<dependency>
+    <groupId>org.postgresql</groupId>
+    <artifactId>postgresql</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.flywaydb</groupId>
+    <artifactId>flyway-core</artifactId>
+</dependency>
+
+<!-- JWT -->
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-api</artifactId>
+</dependency>
+
+<!-- Testing -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-test</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+
+## 🚀 Development Workflow
+
+### Adding New Services
+1. **Create Package Structure**: Follow `com.vira.{service}` pattern
+2. **Database Migration**: Create Flyway migration with proper naming
+3. **Entity Design**: Include timestamps, proper relationships
+4. **Repository Layer**: Extend JpaRepository with custom queries
+5. **Service Layer**: Business logic with comprehensive error handling
+6. **Controller Layer**: REST endpoints with validation
+7. **DTO Classes**: Request/Response objects with validation annotations
+8. **Comprehensive Tests**: Unit + Integration tests for all layers
+9. **Documentation**: Update API docs and README
+
+### Code Review Checklist
+- ✅ Follows package structure and naming conventions
+- ✅ Includes comprehensive test coverage (>80%)
+- ✅ Has proper error handling and validation
+- ✅ Uses consistent response formats
+- ✅ Includes database migration if needed
+- ✅ Updates documentation files
+- ✅ Follows security best practices
+
+## 📚 Documentation Standards
+
+### Required Documentation
+- **README.md**: Project overview and quick start
+- **API Documentation**: Swagger/OpenAPI with examples
+- **Database Schema**: Relationship diagrams and table descriptions
+- **Deployment Guide**: Step-by-step Railway deployment
+- **Testing Guide**: Coverage requirements and examples
+
+### Code Documentation
+- **Javadoc**: For all public methods and classes
+- **Comments**: Explain complex business logic
+- **API Examples**: Include request/response samples
+- **Error Codes**: Document all custom exceptions
+
+## 🔄 Error Handling
+
+### Global Exception Handler
+```java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<ApiResponse<String>> handleValidation(ValidationException ex) {
+        return ResponseEntity.badRequest()
+            .body(ApiResponse.error(ex.getMessage()));
+    }
+    
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<ApiResponse<String>> handleNotFound(EntityNotFoundException ex) {
+        return ResponseEntity.notFound()
+            .build();
+    }
+}
+```
+
+### Response Format
+```java
+public class ApiResponse<T> {
+    private boolean success;
+    private T data;
+    private String message;
+    private String error;
+    // ... constructors and methods
+}
+```
+
+## ⚛️ React Integration Standards
+
+### API Service Layer
+- **Centralized API calls**: Single service file per backend service
+- **Authentication**: Automatic token injection and refresh
+- **Error Handling**: Consistent error response processing
+- **Loading States**: Built-in loading state management
+- **Type Safety**: Use TypeScript interfaces for API responses
+
+### Frontend Architecture
+- **Context API**: For authentication and global state
+- **Custom Hooks**: For API calls and data fetching
+- **Error Boundaries**: Graceful error handling
+- **Loading Components**: Consistent loading indicators
+
+## 🏷️ Environment Configuration
+
+### Development (`application-dev.yml`)
+- H2 in-memory database for quick local testing
+- Debug logging enabled
+- CORS allowing localhost:3000
+- JWT tokens with shorter expiration for testing
+
+### Production (`application-prod.yml`)
+- PostgreSQL database connection
+- Production logging levels
+- Secure CORS configuration
+- Longer JWT token expiration
+- Security headers enabled
+
+## 📈 Performance Guidelines
+
+### Database Optimization
+- **Indexing**: Add indexes for frequently queried columns
+- **Pagination**: Implement for all list endpoints
+- **Lazy Loading**: Use for entity relationships
+- **Connection Pooling**: Configure HikariCP properly
+
+### API Performance
+- **Caching**: Use Spring Cache for frequently accessed data
+- **DTOs**: Never expose entities directly via API
+- **Validation**: Validate early and fail fast
+- **Batch Operations**: Support bulk operations where needed
+
+## 🔧 Development Commands
+
+```bash
+# Local development
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+
+# Run tests with coverage
+./mvnw test jacoco:report
+
+# Build for production
+./mvnw clean package
+
+# Database migration
+./mvnw flyway:migrate
+```
+
+## 🎯 Quality Gates
+
+Before any code merge:
+- ✅ All tests pass (unit + integration)
+- ✅ Code coverage >= 80%
+- ✅ No security vulnerabilities
+- ✅ API documentation updated
+- ✅ Database migrations tested
+- ✅ Error handling implemented
+- ✅ Follows all coding standards
+
+Remember: This is a production-ready backend serving multiple frontend applications. Maintain high code quality, comprehensive testing, and clear documentation for future development. 

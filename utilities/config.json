@@ -1,0 +1,47 @@
+{
+  "project": {
+    "name": "Vira Services Code Generator",
+    "version": "1.0.0",
+    "description": "Generates Spring Boot services with complete CRUD operations, tests, and React integration"
+  },
+  "paths": {
+    "vira_services_root": "C:/Users/804750/Desktop/CursorRepo/vira/vira_services",
+    "src_main_java": "C:/Users/804750/Desktop/CursorRepo/vira/vira_services/src/main/java/com/vira",
+    "src_main_resources": "C:/Users/804750/Desktop/CursorRepo/vira/vira_services/src/main/resources",
+    "src_test_java": "C:/Users/804750/Desktop/CursorRepo/vira/vira_services/src/test/java/com/vira",
+    "migration_path": "C:/Users/804750/Desktop/CursorRepo/vira/vira_services/src/main/resources/db/migration",
+    "frontend_resources": "C:/Users/804750/Desktop/CursorRepo/vira/vira_services/src/main/resources/frontend"
+  },
+  "input": {
+    "service_definition": "./service_definition.json",
+    "encoding": "utf-8"
+  },
+  "generation": {
+    "include_react_integration": true,
+    "include_tests": true,
+    "include_migration": true,
+    "overwrite_existing": false,
+    "backup_before_overwrite": true,
+    "create_package_structure": true
+  },
+  "validation": {
+    "sql_injection_protection": true,
+    "xss_protection": true,
+    "input_sanitization": true,
+    "validate_java_naming": true,
+    "validate_sql_naming": true
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "./logs/generator.log",
+    "console": true,
+    "detailed": true,
+    "max_log_size_mb": 10,
+    "backup_count": 5
+  },
+  "rollback": {
+    "enabled": true,
+    "backup_directory": "./backups",
+    "cleanup_after_success": false
+  }
+} 

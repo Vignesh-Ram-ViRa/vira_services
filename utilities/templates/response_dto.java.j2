@@ -1,0 +1,213 @@
+package com.vira.{{ service.name }}.dto;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+{% for field in fields -%}
+{% if field.javaType == 'LocalDateTime' or field.javaType == 'LocalDate' %}
+import java.time.{{ field.javaType }};
+{% elif field.javaType == 'BigDecimal' %}
+import java.math.BigDecimal;
+{% endif %}
+{%- endfor %}
+
+/**
+ * Response DTO for {{ database.entity }} operations.
+ * 
+ * Used for returning {{ database.entity.lower() }} data from API endpoints.
+ * Contains all entity fields in a format suitable for client consumption.
+ * 
+ * @author {{ service.author }}
+ * @version {{ service.version }}
+ * @since {{ service.version }}
+ */
+@Schema(description = "Response object containing {{ database.entity.lower() }} data")
+public class {{ database.entity }}Response {
+
+{% for field in fields %}
+    /**
+     * {{ field.description }}
+     */
+    @Schema(description = "{{ field.description }}", 
+            {% if field.primaryKey -%}
+            accessMode = Schema.AccessMode.READ_ONLY,
+            {% endif -%}
+            {% if field.javaType == 'String' and field.validation and field.validation.maxLength -%}
+            maxLength = {{ field.validation.maxLength }},
+            {% endif -%}
+            {% if field.validation and field.validation.min is defined -%}
+            minimum = "{{ field.validation.min }}",
+            {% endif -%}
+            example = "{% if field.javaType == 'String' %}Sample {{ field.name | replace('_', ' ') }}{% elif field.javaType == 'BigDecimal' %}100.50{% elif field.javaType == 'Integer' %}1{% elif field.javaType == 'Long' %}1{% elif field.javaType == 'LocalDateTime' %}2024-01-15T10:30:00{% elif field.javaType == 'LocalDate' %}2024-01-15{% elif field.javaType == 'Boolean' %}true{% else %}sample{% endif %}")
+    @JsonProperty("{{ field.name }}")
+    private {{ field.javaType }} {{ field.name | camelCase }};
+
+{% endfor %}
+
+    /**
+     * Default constructor.
+     */
+    public {{ database.entity }}Response() {
+    }
+
+    /**
+     * Constructor with all fields.
+     */
+    public {{ database.entity }}Response(
+        {%- for field in fields -%}
+        {{ field.javaType }} {{ field.name | camelCase }}{% if not loop.last %}, {% endif %}
+        {%- endfor -%}
+    ) {
+        {% for field in fields -%}
+        this.{{ field.name | camelCase }} = {{ field.name | camelCase }};
+        {% endfor %}
+    }
+
+{% for field in fields %}
+    /**
+     * Get {{ field.description.lower() }}.
+     * 
+     * @return {{ field.description.lower() }}
+     */
+    public {{ field.javaType }} get{{ field.name | pascalCase }}() {
+        return {{ field.name | camelCase }};
+    }
+
+    /**
+     * Set {{ field.description.lower() }}.
+     * 
+     * @param {{ field.name | camelCase }} {{ field.description.lower() }}
+     */
+    public void set{{ field.name | pascalCase }}({{ field.javaType }} {{ field.name | camelCase }}) {
+        this.{{ field.name | camelCase }} = {{ field.name | camelCase }};
+    }
+
+{% endfor %}
+
+    /**
+     * Builder pattern for {{ database.entity }}Response.
+     * 
+     * @return builder instance
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Builder class for {{ database.entity }}Response.
+     */
+    public static class Builder {
+        private {{ database.entity }}Response response = new {{ database.entity }}Response();
+
+{% for field in fields %}
+        /**
+         * Set {{ field.description.lower() }}.
+         * 
+         * @param {{ field.name | camelCase }} {{ field.description.lower() }}
+         * @return builder instance
+         */
+        public Builder {{ field.name | camelCase }}({{ field.javaType }} {{ field.name | camelCase }}) {
+            response.{{ field.name | camelCase }} = {{ field.name | camelCase }};
+            return this;
+        }
+
+{% endfor %}
+        /**
+         * Build the response object.
+         * 
+         * @return {{ database.entity }}Response instance
+         */
+        public {{ database.entity }}Response build() {
+            return response;
+        }
+    }
+
+    /**
+     * Create response from entity.
+     * 
+     * @param entity the entity to convert
+     * @return response instance
+     */
+    public static {{ database.entity }}Response fromEntity(com.vira.{{ service.name }}.model.{{ database.entity }} entity) {
+        if (entity == null) {
+            return null;
+        }
+        
+        return new {{ database.entity }}Response(
+            {% for field in fields -%}
+            entity.get{{ field.name | pascalCase }}(){% if not loop.last %},{% endif %}
+            {% endfor %}
+        );
+    }
+
+    /**
+     * Get a summary of key information for display purposes.
+     * 
+     * @return summary string
+     */
+    public String getSummary() {
+        return String.format("{{ database.entity }} [ID: %s{% for field in fields if field.javaType == 'String' and not field.primaryKey %}, {{ field.name | replace('_', ' ') | title }}: %s{% break %}{% endfor %}]", 
+            {% for field in fields if field.primaryKey -%}
+            {{ field.name | camelCase }}{% for field2 in fields if field2.javaType == 'String' and not field2.primaryKey %}, {{ field2.name | camelCase }}{% break %}{% endfor %}
+            {% endfor %});
+    }
+
+    /**
+     * Check if this is a new entity (no ID).
+     * 
+     * @return true if new, false if existing
+     */
+    public boolean isNew() {
+        {% for field in fields if field.primaryKey -%}
+        return {{ field.name | camelCase }} == null;
+        {% endfor %}
+    }
+
+    /**
+     * Check equality based on ID.
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        {{ database.entity }}Response that = ({{ database.entity }}Response) obj;
+        {% for field in fields if field.primaryKey -%}
+        return {{ field.name | camelCase }} != null && {{ field.name | camelCase }}.equals(that.{{ field.name | camelCase }});
+        {% endfor %}
+    }
+
+    /**
+     * Generate hash code based on ID.
+     */
+    @Override
+    public int hashCode() {
+        {% for field in fields if field.primaryKey -%}
+        return {{ field.name | camelCase }} != null ? {{ field.name | camelCase }}.hashCode() : 0;
+        {% endfor %}
+    }
+
+    /**
+     * String representation of the response.
+     */
+    @Override
+    public String toString() {
+        return "{{ database.entity }}Response{" +
+            {% for field in fields -%}
+            "{{ field.name | camelCase }}=" + {{ field.name | camelCase }} +
+            {% if not loop.last %}", " +{% endif %}
+            {% endfor %}
+            '}';
+    }
+
+    /**
+     * Convert to a compact JSON-like string for logging.
+     * 
+     * @return compact string representation
+     */
+    public String toCompactString() {
+        return String.format("{id: %s{% for field in fields if field.javaType == 'String' and not field.primaryKey %}, {{ field.name | camelCase }}: \"%s\"{% break %}{% endfor %}}", 
+            {% for field in fields if field.primaryKey -%}
+            {{ field.name | camelCase }}{% for field2 in fields if field2.javaType == 'String' and not field2.primaryKey %}, {{ field2.name | camelCase }}{% break %}{% endfor %}
+            {% endfor %});
+    }
+} 

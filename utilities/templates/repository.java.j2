@@ -1,0 +1,189 @@
+package com.vira.{{ service.name }}.repository;
+
+import com.vira.{{ service.name }}.model.{{ database.entity }};
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+{% for field in fields -%}
+{% if field.javaType == 'LocalDateTime' or field.javaType == 'LocalDate' %}
+import java.time.{{ field.javaType }};
+{% elif field.javaType == 'BigDecimal' %}
+import java.math.BigDecimal;
+{% endif %}
+{%- endfor %}
+import java.util.List;
+import java.util.Optional;
+
+/**
+ * Repository interface for {{ database.entity }} entity.
+ * 
+ * Provides CRUD operations and custom queries for {{ database.table }} table.
+ * {{ service.description }}
+ * 
+ * @author {{ service.author }}
+ * @version {{ service.version }}
+ * @since {{ service.version }}
+ */
+@Repository
+public interface {{ database.repository }} extends JpaRepository<{{ database.entity }}, {% for field in fields %}{% if field.primaryKey %}{{ field.javaType }}{% endif %}{% endfor %}> {
+
+    /**
+     * Check if {{ database.entity.lower() }} exists by ID.
+     * 
+     * @param id the entity ID
+     * @return true if exists, false otherwise
+     */
+    boolean existsById({% for field in fields %}{% if field.primaryKey %}{{ field.javaType }} id{% endif %}{% endfor %});
+
+{% if operations.pagination %}
+    /**
+     * Find all {{ database.entity.lower() }}s with pagination.
+     * 
+     * @param pageable pagination information
+     * @return page of {{ database.entity.lower() }}s
+     */
+    Page<{{ database.entity }}> findAll(Pageable pageable);
+{% endif %}
+
+{% if operations.customQueries %}
+{% for query in operations.customQueries %}
+    /**
+     * {{ query.description }}
+     * 
+     {% for param in query.parameters -%}
+     * @param {{ param.split()[-1] }} {{ param.split()[-1] | replace('Id', ' ID') | replace('Date', ' date') }}
+     {% endfor -%}
+     * @return {{ query.returnType.replace('List<' + database.entity + '>', database.entity.lower() + 's').replace('<' + database.entity + '>', ' ' + database.entity.lower()) }}
+     */
+    {% if 'SELECT' in query.query.upper() -%}
+    @Query("{{ query.query.replace('{tableName}', database.table).replace('{entity}', database.entity) }}")
+    {% endif -%}
+    {{ query.returnType.replace('{entity}', database.entity) }} {{ query.name }}(
+        {%- for param in query.parameters -%}
+        @Param("{{ param.split()[-1] }}") {{ param }}{% if not loop.last %}, {% endif %}
+        {%- endfor -%}
+    );
+
+{% endfor %}
+{% endif %}
+
+{% for field in fields %}
+{% if field.foreignKey %}
+    /**
+     * Find {{ database.entity.lower() }}s by {{ field.name | replace('_', ' ') }}.
+     * 
+     * @param {{ field.name | camelCase }} the {{ field.name | replace('_', ' ') }}
+     * @return list of {{ database.entity.lower() }}s
+     */
+    List<{{ database.entity }}> findBy{{ field.name | pascalCase }}({{ field.javaType }} {{ field.name | camelCase }});
+
+    /**
+     * Find {{ database.entity.lower() }}s by {{ field.name | replace('_', ' ') }} with pagination.
+     * 
+     * @param {{ field.name | camelCase }} the {{ field.name | replace('_', ' ') }}
+     * @param pageable pagination information
+     * @return page of {{ database.entity.lower() }}s
+     */
+    Page<{{ database.entity }}> findBy{{ field.name | pascalCase }}({{ field.javaType }} {{ field.name | camelCase }}, Pageable pageable);
+
+    /**
+     * Count {{ database.entity.lower() }}s by {{ field.name | replace('_', ' ') }}.
+     * 
+     * @param {{ field.name | camelCase }} the {{ field.name | replace('_', ' ') }}
+     * @return count of {{ database.entity.lower() }}s
+     */
+    long countBy{{ field.name | pascalCase }}({{ field.javaType }} {{ field.name | camelCase }});
+
+{% endif %}
+{% if field.javaType == 'String' and field.validation and field.validation.maxLength %}
+    /**
+     * Find {{ database.entity.lower() }}s by {{ field.name | replace('_', ' ') }} containing text (case-insensitive).
+     * 
+     * @param {{ field.name | camelCase }} the {{ field.name | replace('_', ' ') }} to search for
+     * @return list of {{ database.entity.lower() }}s
+     */
+    List<{{ database.entity }}> findBy{{ field.name | pascalCase }}ContainingIgnoreCase(String {{ field.name | camelCase }});
+
+{% endif %}
+{% endfor %}
+
+{% if fields | selectattr('name', 'equalto', 'created_at') | list %}
+    /**
+     * Find {{ database.entity.lower() }}s created between dates.
+     * 
+     * @param startDate start date
+     * @param endDate end date
+     * @return list of {{ database.entity.lower() }}s
+     */
+    List<{{ database.entity }}> findByCreatedAtBetween(LocalDateTime startDate, LocalDateTime endDate);
+
+    /**
+     * Find {{ database.entity.lower() }}s created after date.
+     * 
+     * @param date the date
+     * @return list of {{ database.entity.lower() }}s
+     */
+    List<{{ database.entity }}> findByCreatedAtAfter(LocalDateTime date);
+
+    /**
+     * Find recent {{ database.entity.lower() }}s with pagination.
+     * 
+     * @param date the cutoff date
+     * @param pageable pagination information
+     * @return page of recent {{ database.entity.lower() }}s
+     */
+    Page<{{ database.entity }}> findByCreatedAtAfter(LocalDateTime date, Pageable pageable);
+{% endif %}
+
+    /**
+     * Delete all {{ database.entity.lower() }}s by IDs.
+     * 
+     * @param ids list of IDs to delete
+     */
+    void deleteAllByIdInBatch(List<{% for field in fields %}{% if field.primaryKey %}{{ field.javaType }}{% endif %}{% endfor %}> ids);
+
+{% for field in fields %}
+{% if field.foreignKey %}
+    /**
+     * Delete all {{ database.entity.lower() }}s by {{ field.name | replace('_', ' ') }}.
+     * 
+     * @param {{ field.name | camelCase }} the {{ field.name | replace('_', ' ') }}
+     */
+    void deleteBy{{ field.name | pascalCase }}({{ field.javaType }} {{ field.name | camelCase }});
+
+{% endif %}
+{% endfor %}
+
+    /**
+     * Get total count of {{ database.entity.lower() }}s.
+     * 
+     * @return total count
+     */
+    @Query("SELECT COUNT(e) FROM {{ database.entity }} e")
+    long getTotalCount();
+
+{% for field in fields %}
+{% if field.javaType in ['BigDecimal', 'Integer', 'Long'] and not field.primaryKey %}
+    /**
+     * Get sum of {{ field.name | replace('_', ' ') }}.
+     * 
+     * @return sum of {{ field.name | replace('_', ' ') }}
+     */
+    @Query("SELECT SUM(e.{{ field.name | camelCase }}) FROM {{ database.entity }} e")
+    {{ field.javaType }} getSum{{ field.name | pascalCase }}();
+
+    /**
+     * Get average {{ field.name | replace('_', ' ') }}.
+     * 
+     * @return average {{ field.name | replace('_', ' ') }}
+     */
+    @Query("SELECT AVG(e.{{ field.name | camelCase }}) FROM {{ database.entity }} e")
+    Double getAverage{{ field.name | pascalCase }}();
+
+{% endif %}
+{% endfor %}
+} 

@@ -1,0 +1,357 @@
+package com.vira.{{ service.name }}.controller;
+
+import com.vira.{{ service.name }}.dto.{{ database.entity }}Request;
+import com.vira.{{ service.name }}.dto.{{ database.entity }}Response;
+import com.vira.{{ service.name }}.service.{{ database.service }};
+import com.vira.common.dto.ApiResponse;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.responses.ApiResponse as SwaggerApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+{% for field in fields -%}
+{% if field.javaType == 'LocalDateTime' or field.javaType == 'LocalDate' %}
+import java.time.{{ field.javaType }};
+{% elif field.javaType == 'BigDecimal' %}
+import java.math.BigDecimal;
+{% endif %}
+{%- endfor %}
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * REST Controller for {{ database.entity }} operations.
+ * 
+ * Provides RESTful endpoints for {{ service.description.lower() }}.
+ * All endpoints are secured and require appropriate authentication.
+ * 
+ * Base URL: {{ api.basePath }}
+ * 
+ * @author {{ service.author }}
+ * @version {{ service.version }}
+ * @since {{ service.version }}
+ */
+@RestController
+@RequestMapping("{{ api.basePath }}")
+@Tag(name = "{{ database.entity }} Management", description = "{{ service.description }}")
+{% if api.secured -%}
+@SecurityRequirement(name = "bearerAuth")
+{% endif -%}
+{% if api.corsEnabled -%}
+@CrossOrigin(origins = {"http://localhost:3000"})
+{% endif %}
+public class {{ database.controller }} {
+
+    private static final Logger logger = LoggerFactory.getLogger({{ database.controller }}.class);
+
+    private final {{ database.service }} {{ database.service | camelCase }};
+
+    /**
+     * Constructor for dependency injection.
+     * 
+     * @param {{ database.service | camelCase }} the service
+     */
+    @Autowired
+    public {{ database.controller }}({{ database.service }} {{ database.service | camelCase }}) {
+        this.{{ database.service | camelCase }} = {{ database.service | camelCase }};
+    }
+
+{% for endpoint in api.endpoints %}
+{% if endpoint.operation == 'create' and operations.create %}
+    /**
+     * {{ endpoint.description }}
+     * 
+     * @param request the create request
+     * @return the created {{ database.entity.lower() }}
+     */
+    @PostMapping
+    @Operation(summary = "{{ endpoint.description }}", 
+               description = "Creates a new {{ database.entity.lower() }} with the provided data")
+    @ApiResponses(value = {
+        @SwaggerApiResponse(responseCode = "201", description = "{{ database.entity }} created successfully"),
+        @SwaggerApiResponse(responseCode = "400", description = "Invalid request data"),
+        @SwaggerApiResponse(responseCode = "401", description = "Unauthorized"),
+        @SwaggerApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    {% if endpoint.security == 'USER' -%}
+    @PreAuthorize("hasRole('USER')")
+    {% endif -%}
+    public ResponseEntity<ApiResponse<{{ database.entity }}Response>> create{{ database.entity }}(
+            @Valid @RequestBody {{ database.entity }}Request request) {
+        
+        logger.info("POST {{ api.basePath }} - Creating {{ database.entity.lower() }}");
+        
+        try {
+            {{ database.entity }}Response response = {{ database.service | camelCase }}.create{{ database.entity }}(request);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success(response, "{{ database.entity }} created successfully"));
+                    
+        } catch (Exception e) {
+            logger.error("Error creating {{ database.entity.lower() }}: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to create {{ database.entity.lower() }}: " + e.getMessage()));
+        }
+    }
+{% endif %}
+
+{% if endpoint.operation == 'read' and operations.read %}
+    /**
+     * {{ endpoint.description }}
+     * 
+     * @param id the {{ database.entity.lower() }} ID
+     * @return the {{ database.entity.lower() }}
+     */
+    @GetMapping("/{id}")
+    @Operation(summary = "{{ endpoint.description }}", 
+               description = "Retrieves a {{ database.entity.lower() }} by its unique identifier")
+    @ApiResponses(value = {
+        @SwaggerApiResponse(responseCode = "200", description = "{{ database.entity }} retrieved successfully"),
+        @SwaggerApiResponse(responseCode = "404", description = "{{ database.entity }} not found"),
+        @SwaggerApiResponse(responseCode = "401", description = "Unauthorized"),
+        @SwaggerApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    {% if endpoint.security == 'USER' -%}
+    @PreAuthorize("hasRole('USER')")
+    {% endif -%}
+    public ResponseEntity<ApiResponse<{{ database.entity }}Response>> get{{ database.entity }}ById(
+            @Parameter(description = "{{ database.entity }} ID", required = true)
+            @PathVariable {% for field in fields %}{% if field.primaryKey %}{{ field.javaType }} id{% endif %}{% endfor %}) {
+        
+        logger.info("GET {{ api.basePath }}/{} - Fetching {{ database.entity.lower() }}", id);
+        
+        try {
+            {{ database.entity }}Response response = {{ database.service | camelCase }}.get{{ database.entity }}ById(id);
+            return ResponseEntity.ok(ApiResponse.success(response, "{{ database.entity }} retrieved successfully"));
+            
+        } catch (Exception e) {
+            logger.error("Error fetching {{ database.entity.lower() }} with ID {}: {}", id, e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
+    }
+{% endif %}
+
+{% if endpoint.operation == 'update' and operations.update %}
+    /**
+     * {{ endpoint.description }}
+     * 
+     * @param id the {{ database.entity.lower() }} ID
+     * @param request the update request
+     * @return the updated {{ database.entity.lower() }}
+     */
+    @PutMapping("/{id}")
+    @Operation(summary = "{{ endpoint.description }}", 
+               description = "Updates an existing {{ database.entity.lower() }} with the provided data")
+    @ApiResponses(value = {
+        @SwaggerApiResponse(responseCode = "200", description = "{{ database.entity }} updated successfully"),
+        @SwaggerApiResponse(responseCode = "400", description = "Invalid request data"),
+        @SwaggerApiResponse(responseCode = "404", description = "{{ database.entity }} not found"),
+        @SwaggerApiResponse(responseCode = "401", description = "Unauthorized"),
+        @SwaggerApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    {% if endpoint.security == 'USER' -%}
+    @PreAuthorize("hasRole('USER')")
+    {% endif -%}
+    public ResponseEntity<ApiResponse<{{ database.entity }}Response>> update{{ database.entity }}(
+            @Parameter(description = "{{ database.entity }} ID", required = true)
+            @PathVariable {% for field in fields %}{% if field.primaryKey %}{{ field.javaType }} id,{% endif %}{% endfor %}
+            @Valid @RequestBody {{ database.entity }}Request request) {
+        
+        logger.info("PUT {{ api.basePath }}/{} - Updating {{ database.entity.lower() }}", id);
+        
+        try {
+            {{ database.entity }}Response response = {{ database.service | camelCase }}.update{{ database.entity }}(id, request);
+            return ResponseEntity.ok(ApiResponse.success(response, "{{ database.entity }} updated successfully"));
+            
+        } catch (Exception e) {
+            logger.error("Error updating {{ database.entity.lower() }} with ID {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to update {{ database.entity.lower() }}: " + e.getMessage()));
+        }
+    }
+{% endif %}
+
+{% if endpoint.operation == 'delete' and operations.delete %}
+    /**
+     * {{ endpoint.description }}
+     * 
+     * @param id the {{ database.entity.lower() }} ID
+     * @return success response
+     */
+    @DeleteMapping("/{id}")
+    @Operation(summary = "{{ endpoint.description }}", 
+               description = "Permanently deletes a {{ database.entity.lower() }} by its unique identifier")
+    @ApiResponses(value = {
+        @SwaggerApiResponse(responseCode = "200", description = "{{ database.entity }} deleted successfully"),
+        @SwaggerApiResponse(responseCode = "404", description = "{{ database.entity }} not found"),
+        @SwaggerApiResponse(responseCode = "401", description = "Unauthorized"),
+        @SwaggerApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    {% if endpoint.security == 'USER' -%}
+    @PreAuthorize("hasRole('USER')")
+    {% endif -%}
+    public ResponseEntity<ApiResponse<String>> delete{{ database.entity }}(
+            @Parameter(description = "{{ database.entity }} ID", required = true)
+            @PathVariable {% for field in fields %}{% if field.primaryKey %}{{ field.javaType }} id{% endif %}{% endfor %}) {
+        
+        logger.info("DELETE {{ api.basePath }}/{} - Deleting {{ database.entity.lower() }}", id);
+        
+        try {
+            {{ database.service | camelCase }}.delete{{ database.entity }}(id);
+            return ResponseEntity.ok(ApiResponse.success("{{ database.entity }} deleted successfully"));
+            
+        } catch (Exception e) {
+            logger.error("Error deleting {{ database.entity.lower() }} with ID {}: {}", id, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to delete {{ database.entity.lower() }}: " + e.getMessage()));
+        }
+    }
+{% endif %}
+
+{% if endpoint.operation == 'list' and operations.list %}
+    /**
+     * {{ endpoint.description }}
+     * 
+     * @param page page number (0-based)
+     * @param size page size (max 100)
+     * @param sortBy field to sort by
+     * @param sortDirection sort direction (asc/desc)
+     * @return page of {{ database.entity.lower() }}s
+     */
+    @GetMapping
+    @Operation(summary = "{{ endpoint.description }}", 
+               description = "Retrieves a paginated list of {{ database.entity.lower() }}s with optional sorting")
+    @ApiResponses(value = {
+        @SwaggerApiResponse(responseCode = "200", description = "{{ database.entity }}s retrieved successfully"),
+        @SwaggerApiResponse(responseCode = "400", description = "Invalid pagination parameters"),
+        @SwaggerApiResponse(responseCode = "401", description = "Unauthorized"),
+        @SwaggerApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    {% if endpoint.security == 'USER' -%}
+    @PreAuthorize("hasRole('USER')")
+    {% endif -%}
+    public ResponseEntity<ApiResponse<Page<{{ database.entity }}Response>>> getAll{{ database.entity }}s(
+            @Parameter(description = "Page number (0-based)", example = "0")
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            
+            @Parameter(description = "Page size (1-100)", example = "20")
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+            
+            @Parameter(description = "Sort field", example = "{% for field in fields %}{% if field.name == 'created_at' %}createdAt{% else %}id{% endif %}{% break %}{% endfor %}")
+            @RequestParam(defaultValue = "{% for field in fields %}{% if field.name == 'created_at' %}createdAt{% else %}id{% endif %}{% break %}{% endfor %}") String sortBy,
+            
+            @Parameter(description = "Sort direction", example = "desc")
+            @RequestParam(defaultValue = "desc") String sortDirection) {
+        
+        logger.info("GET {{ api.basePath }} - Fetching {{ database.entity.lower() }}s (page: {}, size: {}, sort: {} {})", 
+                    page, size, sortBy, sortDirection);
+        
+        try {
+            Page<{{ database.entity }}Response> response = {{ database.service | camelCase }}.getAll{{ database.entity }}s(page, size, sortBy, sortDirection);
+            return ResponseEntity.ok(ApiResponse.success(response, "{{ database.entity }}s retrieved successfully"));
+            
+        } catch (Exception e) {
+            logger.error("Error fetching {{ database.entity.lower() }}s: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to fetch {{ database.entity.lower() }}s: " + e.getMessage()));
+        }
+    }
+{% endif %}
+{% endfor %}
+
+{% if operations.customQueries %}
+{% for query in operations.customQueries %}
+    /**
+     * {{ query.description }}
+     * 
+     {% for param in query.parameters -%}
+     * @param {{ param.split()[-1] }} {{ param.split()[-1] | replace('Id', ' ID') | replace('Date', ' date') }}
+     {% endfor -%}
+     * @return {{ query.returnType.replace('List<' + database.entity + '>', database.entity.lower() + 's').replace('<' + database.entity + '>', ' ' + database.entity.lower()) }}
+     */
+    @GetMapping("/{{ query.name | replace('findBy', '').lower() }}")
+    @Operation(summary = "{{ query.description }}", 
+               description = "{{ query.description }} using custom query")
+    @ApiResponses(value = {
+        @SwaggerApiResponse(responseCode = "200", description = "Results retrieved successfully"),
+        @SwaggerApiResponse(responseCode = "400", description = "Invalid parameters"),
+        @SwaggerApiResponse(responseCode = "401", description = "Unauthorized"),
+        @SwaggerApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<ApiResponse<{% if 'List' in query.returnType %}List<{{ database.entity }}Response>{% else %}{{ database.entity }}Response{% endif %}>> {{ query.name }}(
+        {%- for param in query.parameters -%}
+        @Parameter(description = "{{ param.split()[-1] | replace('Id', ' ID') | replace('Date', ' date') }}", required = true)
+        @RequestParam {{ param }}{% if not loop.last %},{% endif %}
+        {%- endfor -%}
+    ) {
+        
+        logger.info("GET {{ api.basePath }}/{{ query.name | replace('findBy', '').lower() }} - Executing custom query");
+        
+        try {
+            {% if 'List' in query.returnType -%}
+            List<{{ database.entity }}Response> response = {{ database.service | camelCase }}.{{ query.name }}(
+            {% else -%}
+            {{ database.entity }}Response response = {{ database.service | camelCase }}.{{ query.name }}(
+            {% endif -%}
+                {%- for param in query.parameters -%}
+                {{ param.split()[-1] }}{% if not loop.last %}, {% endif %}
+                {%- endfor -%}
+            );
+            
+            return ResponseEntity.ok(ApiResponse.success(response, "Results retrieved successfully"));
+            
+        } catch (Exception e) {
+            logger.error("Error executing {{ query.name }}: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to execute query: " + e.getMessage()));
+        }
+    }
+
+{% endfor %}
+{% endif %}
+
+    /**
+     * Get {{ database.entity.lower() }} statistics.
+     * 
+     * @return {{ database.entity.lower() }} statistics
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "Get {{ database.entity.lower() }} statistics", 
+               description = "Retrieves statistical information about {{ database.entity.lower() }}s")
+    @ApiResponses(value = {
+        @SwaggerApiResponse(responseCode = "200", description = "Statistics retrieved successfully"),
+        @SwaggerApiResponse(responseCode = "401", description = "Unauthorized"),
+        @SwaggerApiResponse(responseCode = "403", description = "Forbidden")
+    })
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<ApiResponse<{{ database.service }}.{{ database.entity }}StatsResponse>> get{{ database.entity }}Stats() {
+        
+        logger.info("GET {{ api.basePath }}/stats - Fetching {{ database.entity.lower() }} statistics");
+        
+        try {
+            {{ database.service }}.{{ database.entity }}StatsResponse response = {{ database.service | camelCase }}.get{{ database.entity }}Stats();
+            return ResponseEntity.ok(ApiResponse.success(response, "Statistics retrieved successfully"));
+            
+        } catch (Exception e) {
+            logger.error("Error fetching {{ database.entity.lower() }} statistics: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to fetch statistics: " + e.getMessage()));
+        }
+    }
+} 

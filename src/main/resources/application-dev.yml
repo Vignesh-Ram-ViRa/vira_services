@@ -1,0 +1,57 @@
+spring:
+  # H2 Database for Development
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  
+  flyway:
+    enabled: false  # Disable for H2 with ddl-auto
+
+# CORS Configuration for Local React Development
+cors:
+  allowed-origins:
+    - http://localhost:3000
+    - http://localhost:3001
+  allowed-methods:
+    - GET
+    - POST
+    - PUT
+    - DELETE
+    - OPTIONS
+  allowed-headers:
+    - "*"
+  allow-credentials: true
+
+# Logging
+logging:
+  level:
+    com.vira: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# JWT Configuration for Development
+app:
+  jwt:
+    secret: dev-secret-key-for-local-development-only
+    expiration: 3600000  # 1 hour for development
+    refresh-expiration: 86400000  # 1 day for development 

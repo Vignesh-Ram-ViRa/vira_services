@@ -1,0 +1,39 @@
+spring:
+  # H2 Database for Testing
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  
+  flyway:
+    enabled: false  # Disable for tests, use ddl-auto instead
+
+# Logging for Tests
+logging:
+  level:
+    org.springframework.security: DEBUG
+    com.vira: DEBUG
+    org.springframework.test: DEBUG
+    org.springframework.boot.test: DEBUG
+
+# JWT Configuration for Testing
+app:
+  jwt:
+    secret: test-secret-key-for-testing-purposes-only
+    expiration: 3600000  # 1 hour for tests
+    refresh-expiration: 7200000  # 2 hours for tests
+
+# Test-specific configuration
+test:
+  data:
+    cleanup: true 

@@ -1,0 +1,427 @@
+package com.vira.{{ service.name }}.service;
+
+import com.vira.{{ service.name }}.model.{{ database.entity }};
+import com.vira.{{ service.name }}.repository.{{ database.repository }};
+import com.vira.{{ service.name }}.dto.{{ database.entity }}Request;
+import com.vira.{{ service.name }}.dto.{{ database.entity }}Response;
+import com.vira.common.dto.ApiResponse;
+import com.vira.common.exception.BusinessException;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+
+{% for field in fields -%}
+{% if field.javaType == 'LocalDateTime' or field.javaType == 'LocalDate' %}
+import java.time.{{ field.javaType }};
+{% elif field.javaType == 'BigDecimal' %}
+import java.math.BigDecimal;
+{% endif %}
+{%- endfor %}
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Service class for {{ database.entity }} operations.
+ * 
+ * Handles business logic for {{ service.description.lower() }}.
+ * Provides CRUD operations, validation, and custom business methods.
+ * 
+ * @author {{ service.author }}
+ * @version {{ service.version }}
+ * @since {{ service.version }}
+ */
+@Service
+@Transactional
+public class {{ database.service }} {
+
+    private static final Logger logger = LoggerFactory.getLogger({{ database.service }}.class);
+
+    private final {{ database.repository }} {{ database.repository | camelCase }};
+
+    /**
+     * Constructor for dependency injection.
+     * 
+     * @param {{ database.repository | camelCase }} the repository
+     */
+    @Autowired
+    public {{ database.service }}({{ database.repository }} {{ database.repository | camelCase }}) {
+        this.{{ database.repository | camelCase }} = {{ database.repository | camelCase }};
+    }
+
+{% if operations.create %}
+    /**
+     * Create a new {{ database.entity.lower() }}.
+     * 
+     * @param request the create request
+     * @return the created {{ database.entity.lower() }} response
+     * @throws BusinessException if validation fails or creation error occurs
+     */
+    public {{ database.entity }}Response create{{ database.entity }}({{ database.entity }}Request request) {
+        logger.info("Creating new {{ database.entity.lower() }}");
+        
+        try {
+            // Validate request
+            validateCreateRequest(request);
+            
+            // Create entity from request
+            {{ database.entity }} {{ database.entity | camelCase }} = createEntityFromRequest(request);
+            
+            // Save entity
+            {{ database.entity }} saved{{ database.entity }} = {{ database.repository | camelCase }}.save({{ database.entity | camelCase }});
+            
+            logger.info("Successfully created {{ database.entity.lower() }} with ID: {}", saved{{ database.entity }}.{% for field in fields %}{% if field.primaryKey %}get{{ field.name | pascalCase }}(){% endif %}{% endfor %});
+            
+            return convertToResponse(saved{{ database.entity }});
+            
+        } catch (Exception e) {
+            logger.error("Error creating {{ database.entity.lower() }}: {}", e.getMessage());
+            throw new BusinessException("Failed to create {{ database.entity.lower() }}: " + e.getMessage());
+        }
+    }
+{% endif %}
+
+{% if operations.read %}
+    /**
+     * Get {{ database.entity.lower() }} by ID.
+     * 
+     * @param id the {{ database.entity.lower() }} ID
+     * @return the {{ database.entity.lower() }} response
+     * @throws BusinessException if {{ database.entity.lower() }} not found
+     */
+    @Transactional(readOnly = true)
+    public {{ database.entity }}Response get{{ database.entity }}ById({% for field in fields %}{% if field.primaryKey %}{{ field.javaType }} id{% endif %}{% endfor %}) {
+        logger.info("Fetching {{ database.entity.lower() }} with ID: {}", id);
+        
+        {{ database.entity }} {{ database.entity | camelCase }} = {{ database.repository | camelCase }}.findById(id)
+                .orElseThrow(() -> new BusinessException("{{ database.entity }} not found with ID: " + id));
+        
+        return convertToResponse({{ database.entity | camelCase }});
+    }
+{% endif %}
+
+{% if operations.update %}
+    /**
+     * Update existing {{ database.entity.lower() }}.
+     * 
+     * @param id the {{ database.entity.lower() }} ID
+     * @param request the update request
+     * @return the updated {{ database.entity.lower() }} response
+     * @throws BusinessException if {{ database.entity.lower() }} not found or validation fails
+     */
+    public {{ database.entity }}Response update{{ database.entity }}({% for field in fields %}{% if field.primaryKey %}{{ field.javaType }} id, {% endif %}{% endfor %}{{ database.entity }}Request request) {
+        logger.info("Updating {{ database.entity.lower() }} with ID: {}", id);
+        
+        try {
+            // Check if entity exists
+            {{ database.entity }} existing{{ database.entity }} = {{ database.repository | camelCase }}.findById(id)
+                    .orElseThrow(() -> new BusinessException("{{ database.entity }} not found with ID: " + id));
+            
+            // Validate update request
+            validateUpdateRequest(request, existing{{ database.entity }});
+            
+            // Update entity from request
+            updateEntityFromRequest(existing{{ database.entity }}, request);
+            
+            // Save updated entity
+            {{ database.entity }} updated{{ database.entity }} = {{ database.repository | camelCase }}.save(existing{{ database.entity }});
+            
+            logger.info("Successfully updated {{ database.entity.lower() }} with ID: {}", id);
+            
+            return convertToResponse(updated{{ database.entity }});
+            
+        } catch (Exception e) {
+            logger.error("Error updating {{ database.entity.lower() }} with ID {}: {}", id, e.getMessage());
+            throw new BusinessException("Failed to update {{ database.entity.lower() }}: " + e.getMessage());
+        }
+    }
+{% endif %}
+
+{% if operations.delete %}
+    /**
+     * Delete {{ database.entity.lower() }} by ID.
+     * 
+     * @param id the {{ database.entity.lower() }} ID
+     * @throws BusinessException if {{ database.entity.lower() }} not found
+     */
+    public void delete{{ database.entity }}({% for field in fields %}{% if field.primaryKey %}{{ field.javaType }} id{% endif %}{% endfor %}) {
+        logger.info("Deleting {{ database.entity.lower() }} with ID: {}", id);
+        
+        try {
+            // Check if entity exists
+            if (!{{ database.repository | camelCase }}.existsById(id)) {
+                throw new BusinessException("{{ database.entity }} not found with ID: " + id);
+            }
+            
+            // Perform soft delete if applicable, otherwise hard delete
+            {{ database.repository | camelCase }}.deleteById(id);
+            
+            logger.info("Successfully deleted {{ database.entity.lower() }} with ID: {}", id);
+            
+        } catch (Exception e) {
+            logger.error("Error deleting {{ database.entity.lower() }} with ID {}: {}", id, e.getMessage());
+            throw new BusinessException("Failed to delete {{ database.entity.lower() }}: " + e.getMessage());
+        }
+    }
+{% endif %}
+
+{% if operations.list %}
+    /**
+     * Get all {{ database.entity.lower() }}s with pagination.
+     * 
+     * @param page page number (0-based)
+     * @param size page size
+     * @param sortBy field to sort by
+     * @param sortDirection sort direction (ASC/DESC)
+     * @return page of {{ database.entity.lower() }} responses
+     */
+    @Transactional(readOnly = true)
+    public Page<{{ database.entity }}Response> getAll{{ database.entity }}s(int page, int size, String sortBy, String sortDirection) {
+        logger.info("Fetching {{ database.entity.lower() }}s - page: {}, size: {}, sortBy: {}, direction: {}", 
+                    page, size, sortBy, sortDirection);
+        
+        try {
+            // Create sort object
+            Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+            
+            // Create pageable
+            Pageable pageable = PageRequest.of(page, size, sort);
+            
+            // Fetch data
+            Page<{{ database.entity }}> {{ database.entity | camelCase }}Page = {{ database.repository | camelCase }}.findAll(pageable);
+            
+            // Convert to response
+            return {{ database.entity | camelCase }}Page.map(this::convertToResponse);
+            
+        } catch (Exception e) {
+            logger.error("Error fetching {{ database.entity.lower() }}s: {}", e.getMessage());
+            throw new BusinessException("Failed to fetch {{ database.entity.lower() }}s: " + e.getMessage());
+        }
+    }
+{% endif %}
+
+{% if operations.customQueries %}
+{% for query in operations.customQueries %}
+    /**
+     * {{ query.description }}
+     * 
+     {% for param in query.parameters -%}
+     * @param {{ param.split()[-1] }} {{ param.split()[-1] | replace('Id', ' ID') | replace('Date', ' date') }}
+     {% endfor -%}
+     * @return {{ query.returnType.replace('List<' + database.entity + '>', 'list of ' + database.entity.lower() + ' responses').replace('<' + database.entity + '>', ' ' + database.entity.lower() + ' response') }}
+     */
+    @Transactional(readOnly = true)
+    public {% if 'List' in query.returnType %}List<{{ database.entity }}Response>{% else %}{{ database.entity }}Response{% endif %} {{ query.name }}(
+        {%- for param in query.parameters -%}
+        {{ param }}{% if not loop.last %}, {% endif %}
+        {%- endfor -%}
+    ) {
+        logger.info("Executing custom query: {{ query.name }}");
+        
+        try {
+            {% if 'List' in query.returnType -%}
+            List<{{ database.entity }}> results = {{ database.repository | camelCase }}.{{ query.name }}(
+                {%- for param in query.parameters -%}
+                {{ param.split()[-1] }}{% if not loop.last %}, {% endif %}
+                {%- endfor -%}
+            );
+            
+            return results.stream()
+                    .map(this::convertToResponse)
+                    .collect(Collectors.toList());
+            {% else -%}
+            {{ database.entity }} result = {{ database.repository | camelCase }}.{{ query.name }}(
+                {%- for param in query.parameters -%}
+                {{ param.split()[-1] }}{% if not loop.last %}, {% endif %}
+                {%- endfor -%}
+            );
+            
+            return convertToResponse(result);
+            {% endif %}
+            
+        } catch (Exception e) {
+            logger.error("Error executing {{ query.name }}: {}", e.getMessage());
+            throw new BusinessException("Failed to execute {{ query.name }}: " + e.getMessage());
+        }
+    }
+
+{% endfor %}
+{% endif %}
+
+    /**
+     * Get {{ database.entity.lower() }} statistics.
+     * 
+     * @return {{ database.entity.lower() }} statistics
+     */
+    @Transactional(readOnly = true)
+    public {{ database.entity }}StatsResponse get{{ database.entity }}Stats() {
+        logger.info("Fetching {{ database.entity.lower() }} statistics");
+        
+        try {
+            long totalCount = {{ database.repository | camelCase }}.getTotalCount();
+            
+            {{ database.entity }}StatsResponse stats = new {{ database.entity }}StatsResponse();
+            stats.setTotalCount(totalCount);
+            
+            return stats;
+            
+        } catch (Exception e) {
+            logger.error("Error fetching {{ database.entity.lower() }} statistics: {}", e.getMessage());
+            throw new BusinessException("Failed to fetch {{ database.entity.lower() }} statistics: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Validate create request.
+     * 
+     * @param request the create request
+     * @throws BusinessException if validation fails
+     */
+    private void validateCreateRequest({{ database.entity }}Request request) {
+        if (request == null) {
+            throw new BusinessException("{{ database.entity }} request cannot be null");
+        }
+        
+        {% for field in fields if field.validation and field.validation.required and not field.autoGenerated -%}
+        {% if field.javaType == 'String' -%}
+        if (!StringUtils.hasText(request.get{{ field.name | pascalCase }}())) {
+            throw new BusinessException("{{ field.name | replace('_', ' ') | title }} is required");
+        }
+        {% else -%}
+        if (request.get{{ field.name | pascalCase }}() == null) {
+            throw new BusinessException("{{ field.name | replace('_', ' ') | title }} is required");
+        }
+        {% endif -%}
+        
+        {% endfor -%}
+        
+        // Additional business validation
+        performBusinessValidation(request);
+    }
+
+    /**
+     * Validate update request.
+     * 
+     * @param request the update request
+     * @param existing the existing entity
+     * @throws BusinessException if validation fails
+     */
+    private void validateUpdateRequest({{ database.entity }}Request request, {{ database.entity }} existing) {
+        if (request == null) {
+            throw new BusinessException("{{ database.entity }} request cannot be null");
+        }
+        
+        if (existing == null) {
+            throw new BusinessException("Existing {{ database.entity.lower() }} cannot be null");
+        }
+        
+        // Additional business validation for updates
+        performBusinessValidation(request);
+    }
+
+    /**
+     * Perform business-specific validation.
+     * 
+     * @param request the request to validate
+     * @throws BusinessException if validation fails
+     */
+    private void performBusinessValidation({{ database.entity }}Request request) {
+        // Add custom business validation logic here
+        
+        {% for field in fields if field.validation -%}
+        {% if field.validation.sanitize -%}
+        // Sanitize {{ field.name | replace('_', ' ') }} for security
+        if (request.get{{ field.name | pascalCase }}() != null) {
+            String sanitized = sanitizeInput(request.get{{ field.name | pascalCase }}());
+            request.set{{ field.name | pascalCase }}(sanitized);
+        }
+        {% endif -%}
+        {% endfor %}
+    }
+
+    /**
+     * Sanitize input for security.
+     * 
+     * @param input the input to sanitize
+     * @return sanitized input
+     */
+    private String sanitizeInput(String input) {
+        if (input == null) {
+            return null;
+        }
+        
+        // Remove potentially dangerous characters
+        return input.replaceAll("[<>&\"']", "");
+    }
+
+    /**
+     * Create entity from request.
+     * 
+     * @param request the request
+     * @return the created entity
+     */
+    private {{ database.entity }} createEntityFromRequest({{ database.entity }}Request request) {
+        {{ database.entity }} {{ database.entity | camelCase }} = new {{ database.entity }}();
+        
+        {% for field in fields if not field.autoGenerated and not field.name in ['created_at', 'updated_at'] -%}
+        {{ database.entity | camelCase }}.set{{ field.name | pascalCase }}(request.get{{ field.name | pascalCase }}());
+        {% endfor %}
+        
+        return {{ database.entity | camelCase }};
+    }
+
+    /**
+     * Update entity from request.
+     * 
+     * @param entity the entity to update
+     * @param request the update request
+     */
+    private void updateEntityFromRequest({{ database.entity }} entity, {{ database.entity }}Request request) {
+        {% for field in fields if not field.autoGenerated and not field.primaryKey and not field.name in ['created_at', 'updated_at'] -%}
+        if (request.get{{ field.name | pascalCase }}() != null) {
+            entity.set{{ field.name | pascalCase }}(request.get{{ field.name | pascalCase }}());
+        }
+        {% endfor %}
+    }
+
+    /**
+     * Convert entity to response.
+     * 
+     * @param {{ database.entity | camelCase }} the entity
+     * @return the response
+     */
+    private {{ database.entity }}Response convertToResponse({{ database.entity }} {{ database.entity | camelCase }}) {
+        {{ database.entity }}Response response = new {{ database.entity }}Response();
+        
+        {% for field in fields -%}
+        response.set{{ field.name | pascalCase }}({{ database.entity | camelCase }}.get{{ field.name | pascalCase }}());
+        {% endfor %}
+        
+        return response;
+    }
+
+    /**
+     * Statistics response class for {{ database.entity }}.
+     */
+    public static class {{ database.entity }}StatsResponse {
+        private long totalCount;
+        
+        // Getters and setters
+        public long getTotalCount() {
+            return totalCount;
+        }
+        
+        public void setTotalCount(long totalCount) {
+            this.totalCount = totalCount;
+        }
+    }
+} 
