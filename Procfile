@@ -1,1 +1,1 @@
-web: java -jar target/vira-services-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod 
+web: java -Dserver.port=$PORT -Dspring.profiles.active=prod -jar target/vira-services-0.0.1-SNAPSHOT.jar 
