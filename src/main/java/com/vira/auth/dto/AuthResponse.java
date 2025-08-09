@@ -20,6 +20,9 @@ public class AuthResponse {
     @Schema(description = "User information")
     private UserResponse user;
 
+    @Schema(description = "Additional message", example = "Registration successful")
+    private String message;
+
     // Constructors
     public AuthResponse() {}
 
@@ -27,6 +30,14 @@ public class AuthResponse {
         this.token = token;
         this.refreshToken = refreshToken;
         this.user = user;
+    }
+
+    public AuthResponse(String token, String refreshToken, String type, UserResponse user, String message) {
+        this.token = token;
+        this.refreshToken = refreshToken;
+        this.type = type;
+        this.user = user;
+        this.message = message;
     }
 
     // Getters and Setters
@@ -62,11 +73,20 @@ public class AuthResponse {
         this.user = user;
     }
 
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
     @Override
     public String toString() {
         return "AuthResponse{" +
                 "type='" + type + '\'' +
                 ", user=" + user +
+                ", message='" + message + '\'' +
                 '}';
     }
 } 

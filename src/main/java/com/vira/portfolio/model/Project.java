@@ -66,6 +66,9 @@ public class Project {
     @Column(name = "featured", nullable = false)
     private Boolean featured = false;
 
+    @Column(name = "private", nullable = false)
+    private Boolean isPrivate = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -174,6 +177,14 @@ public class Project {
 
     public void setFeatured(Boolean featured) {
         this.featured = featured;
+    }
+
+    public Boolean getIsPrivate() {
+        return isPrivate;
+    }
+
+    public void setIsPrivate(Boolean isPrivate) {
+        this.isPrivate = isPrivate;
     }
 
     public User getUser() {

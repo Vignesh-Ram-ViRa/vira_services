@@ -18,6 +18,7 @@ public class ProjectResponse {
     private String category;
     private Integer year;
     private Boolean featured;
+    private Boolean isPrivate;
     private String username; // User who created the project
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -39,6 +40,7 @@ public class ProjectResponse {
         this.category = project.getCategory();
         this.year = project.getYear();
         this.featured = project.getFeatured();
+        this.isPrivate = project.getIsPrivate();
         this.username = project.getUser().getUsername();
         this.createdAt = project.getCreatedAt();
         this.updatedAt = project.getUpdatedAt();
@@ -144,6 +146,14 @@ public class ProjectResponse {
 
     public void setFeatured(Boolean featured) {
         this.featured = featured;
+    }
+
+    public Boolean getIsPrivate() {
+        return isPrivate;
+    }
+
+    public void setIsPrivate(Boolean isPrivate) {
+        this.isPrivate = isPrivate;
     }
 
     public String getUsername() {

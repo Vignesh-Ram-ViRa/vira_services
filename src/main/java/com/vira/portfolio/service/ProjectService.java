@@ -211,6 +211,101 @@ public class ProjectService {
         return new ProjectStatsResponse(totalProjects, featuredProjects);
     }
 
+    /**
+     * Create pageable object with sorting
+     */
+    private Pageable createPageable(int page, int size, String sortBy, String sortDir) {
+        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Sort sort = Sort.by(direction, sortBy);
+        return PageRequest.of(page, size, sort);
+    }
+
+    // ========================
+    // PUBLIC PROJECT METHODS (Guest Access)
+    // ========================
+
+    /**
+     * Get public projects with pagination and filtering
+     */
+    @Transactional(readOnly = true)
+    public Page<ProjectResponse> getPublicProjects(int page, int size, String sortBy, String sortDir, 
+                                                  String technology, String category, Boolean featured) {
+        logger.info("Fetching public projects - page: {}, size: {}, technology: {}, category: {}, featured: {}", 
+                   page, size, technology, category, featured);
+        
+        Pageable pageable = createPageable(page, size, sortBy, sortDir);
+        Page<Project> projects;
+        
+        // Use complex filtering if any filters are provided
+        if (technology != null || category != null || featured != null) {
+            projects = projectRepository.findPublicProjectsWithFilters(category, technology, featured, pageable);
+        } else {
+            projects = projectRepository.findByIsPrivateFalse(pageable);
+        }
+        
+        logger.info("Found {} public projects", projects.getTotalElements());
+        return projects.map(ProjectResponse::new);
+    }
+
+    /**
+     * Get a specific public project by ID
+     */
+    @Transactional(readOnly = true)
+    public ProjectResponse getPublicProject(Long id) {
+        logger.info("Fetching public project with ID: {}", id);
+        
+        Project project = projectRepository.findPublicProjectById(id)
+            .orElseThrow(() -> new BusinessException("Public project not found with ID: " + id, HttpStatus.NOT_FOUND));
+        
+        logger.info("Found public project: {}", project.getTitle());
+        return new ProjectResponse(project);
+    }
+
+    /**
+     * Get featured public projects
+     */
+    @Transactional(readOnly = true)
+    public List<ProjectResponse> getFeaturedPublicProjects() {
+        logger.info("Fetching featured public projects");
+        
+        List<Project> projects = projectRepository.findByIsPrivateFalseAndFeaturedTrueOrderByCreatedAtDesc();
+        
+        logger.info("Found {} featured public projects", projects.size());
+        return projects.stream()
+            .map(ProjectResponse::new)
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Get public project statistics
+     */
+    @Transactional(readOnly = true)
+    public PublicProjectStatsResponse getPublicProjectStats() {
+        logger.info("Fetching public project statistics");
+        
+        long totalPublicProjects = projectRepository.countByIsPrivateFalse();
+        long featuredPublicProjects = projectRepository.countByIsPrivateFalseAndFeaturedTrue();
+        List<String> technologies = projectRepository.findDistinctTechnologiesFromPublicProjects();
+        
+        logger.info("Public project stats - total: {}, featured: {}, technologies: {}", 
+                   totalPublicProjects, featuredPublicProjects, technologies.size());
+        
+        return new PublicProjectStatsResponse(totalPublicProjects, featuredPublicProjects, technologies);
+    }
+
+    /**
+     * Get all technologies used in public projects
+     */
+    @Transactional(readOnly = true)
+    public List<String> getPublicProjectTechnologies() {
+        logger.info("Fetching public project technologies");
+        
+        List<String> technologies = projectRepository.findDistinctTechnologiesFromPublicProjects();
+        
+        logger.info("Found {} distinct technologies in public projects", technologies.size());
+        return technologies;
+    }
+
     // Helper methods
     private User getUserByUsername(String username) {
         return userRepository.findByUsername(username)
@@ -235,6 +330,7 @@ public class ProjectService {
         project.setCategory(request.getCategory());
         project.setYear(request.getYear());
         project.setFeatured(request.getFeatured() != null ? request.getFeatured() : false);
+        project.setIsPrivate(request.getPrivate() != null ? request.getPrivate() : false);
     }
 
     // Inner class for project statistics
@@ -253,6 +349,31 @@ public class ProjectService {
 
         public long getFeaturedProjects() {
             return featuredProjects;
+        }
+    }
+
+    // Inner class for public project statistics
+    public static class PublicProjectStatsResponse {
+        private long totalPublicProjects;
+        private long featuredPublicProjects;
+        private List<String> technologies;
+
+        public PublicProjectStatsResponse(long totalPublicProjects, long featuredPublicProjects, List<String> technologies) {
+            this.totalPublicProjects = totalPublicProjects;
+            this.featuredPublicProjects = featuredPublicProjects;
+            this.technologies = technologies;
+        }
+
+        public long getTotalPublicProjects() {
+            return totalPublicProjects;
+        }
+
+        public long getFeaturedPublicProjects() {
+            return featuredPublicProjects;
+        }
+
+        public List<String> getTechnologies() {
+            return technologies;
         }
     }
 } 

@@ -35,7 +35,7 @@ CREATE TABLE auth_refresh_tokens (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert default roles
+-- Insert default roles (will be updated by V3 migration to use new role names)
 INSERT INTO auth_roles (name, description) VALUES 
     ('USER', 'Standard user role with basic permissions'),
     ('ADMIN', 'Administrator role with full permissions');
@@ -60,7 +60,4 @@ $$ language 'plpgsql';
 CREATE TRIGGER update_auth_users_updated_at BEFORE UPDATE ON auth_users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Insert default roles
-INSERT INTO auth_roles (name, description, created_at) VALUES 
-    ('USER', 'Default user role', CURRENT_TIMESTAMP),
-    ('ADMIN', 'Administrator role', CURRENT_TIMESTAMP); 
+-- Note: Duplicate role insert removed - roles are created above 

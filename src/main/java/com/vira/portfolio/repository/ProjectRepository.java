@@ -53,4 +53,49 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     
     // Find project by ID and user ID (for security)
     Optional<Project> findByIdAndUserId(Long id, Long userId);
+
+    // ========================
+    // PUBLIC PROJECT METHODS (Guest Access)
+    // ========================
+    
+    // Find all public projects (private = false)
+    Page<Project> findByIsPrivateFalse(Pageable pageable);
+    List<Project> findByIsPrivateFalse();
+    
+    // Find public projects by category
+    Page<Project> findByIsPrivateFalseAndCategoryContainingIgnoreCase(String category, Pageable pageable);
+    
+    // Find public featured projects
+    List<Project> findByIsPrivateFalseAndFeaturedTrueOrderByCreatedAtDesc();
+    
+    // Find public projects by technology
+    @Query("SELECT p FROM Project p JOIN p.technologies t WHERE p.isPrivate = false AND LOWER(t) LIKE LOWER(CONCAT('%', :technology, '%'))")
+    Page<Project> findPublicProjectsByTechnology(@Param("technology") String technology, Pageable pageable);
+    
+    // Find public project by ID
+    @Query("SELECT p FROM Project p WHERE p.id = :id AND p.isPrivate = false")
+    Optional<Project> findPublicProjectById(@Param("id") Long id);
+    
+    // Count public projects
+    long countByIsPrivateFalse();
+    
+    // Count public featured projects
+    long countByIsPrivateFalseAndFeaturedTrue();
+    
+    // Get all technologies from public projects
+    @Query("SELECT DISTINCT t FROM Project p JOIN p.technologies t WHERE p.isPrivate = false ORDER BY t")
+    List<String> findDistinctTechnologiesFromPublicProjects();
+    
+    // Complex public project filtering
+    @Query("SELECT p FROM Project p JOIN p.technologies t WHERE " +
+           "p.isPrivate = false " +
+           "AND (:category IS NULL OR LOWER(p.category) LIKE LOWER(CONCAT('%', :category, '%'))) " +
+           "AND (:technology IS NULL OR LOWER(t) LIKE LOWER(CONCAT('%', :technology, '%'))) " +
+           "AND (:featured IS NULL OR p.featured = :featured)")
+    Page<Project> findPublicProjectsWithFilters(
+        @Param("category") String category,
+        @Param("technology") String technology, 
+        @Param("featured") Boolean featured,
+        Pageable pageable
+    );
 } 

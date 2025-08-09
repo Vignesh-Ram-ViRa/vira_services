@@ -2,6 +2,8 @@ package com.vira.config;
 
 import com.vira.auth.security.JwtAuthenticationEntryPoint;
 import com.vira.auth.security.JwtAuthenticationFilter;
+import com.vira.auth.security.OAuth2SuccessHandler;
+import com.vira.auth.service.UserDetailsServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,6 +39,9 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    @Autowired
+    private CorsConfig corsConfig;
+
     /**
      * Password encoder bean using BCrypt.
      */
@@ -65,6 +70,14 @@ public class SecurityConfig {
     }
 
     /**
+     * OAuth2 success handler bean.
+     */
+    @Bean
+    public OAuth2SuccessHandler oAuth2SuccessHandler() {
+        return new OAuth2SuccessHandler();
+    }
+
+    /**
      * Security filter chain configuration.
      */
     @Bean
@@ -73,6 +86,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         // Public endpoints
                         .requestMatchers("/api/auth/register", "/api/auth/login", "/api/auth/refresh").permitAll()
+                        // Public portfolio endpoints (guest access)
+                        .requestMatchers("/api/public/**").permitAll()
+                        // OAuth2 endpoints
+                        .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         // Swagger/OpenAPI endpoints
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         // Actuator health endpoint
@@ -82,14 +99,20 @@ public class SecurityConfig {
                         // All other requests require authentication
                         .anyRequest().authenticated()
                 )
+                .cors(cors -> cors.configurationSource(corsConfig.corsConfigurationSource()))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // OAuth2 login configuration
+                .oauth2Login(oauth2 -> oauth2
+                    .successHandler(oAuth2SuccessHandler())
+                    .failureUrl("/api/auth/oauth2/error")
+                );
 
         // Add JWT filter
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         // Allow frames for H2 console (dev only)
-        http.headers(headers -> headers.frameOptions().sameOrigin());
+        http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()));
 
         return http.build();
     }

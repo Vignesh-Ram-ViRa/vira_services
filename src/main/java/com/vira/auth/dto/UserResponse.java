@@ -23,7 +23,9 @@ public class UserResponse {
     @Schema(description = "Account enabled status", example = "true")
     private Boolean enabled;
 
-    @Schema(description = "User roles", example = "[\"USER\"]")
+    @Schema(description = "User roles in the system", 
+            example = "[\"NORMAL_USER\"]",
+            allowableValues = {"GUEST", "NORMAL_USER", "SUPER_USER", "ADMIN"})
     private Set<String> roles;
 
     @Schema(description = "Account creation timestamp", example = "2024-01-15T10:30:00")

@@ -78,9 +78,9 @@ public class AuthService {
                 passwordEncoder.encode(request.getPassword())
         );
 
-        // Assign default role
+        // Assign default NORMAL_USER role
         Set<Role> roles = new HashSet<>();
-        Role userRole = roleRepository.findByName(RoleName.USER)
+        Role userRole = roleRepository.findByName(RoleName.NORMAL_USER)
                 .orElseThrow(() -> new BusinessException("Default user role not found", HttpStatus.INTERNAL_SERVER_ERROR));
         roles.add(userRole);
         user.setRoles(roles);
@@ -189,7 +189,7 @@ public class AuthService {
     /**
      * Save or update refresh token for user.
      */
-    private void saveRefreshToken(User user, String tokenValue) {
+    public void saveRefreshToken(User user, String tokenValue) {
         // Remove existing refresh token for user
         refreshTokenRepository.findByUser(user).ifPresent(refreshTokenRepository::delete);
 
@@ -204,9 +204,156 @@ public class AuthService {
     }
 
     /**
+     * Register a new super user (requires admin approval).
+     */
+    public AuthResponse registerSuperUser(SuperUserRequest request) {
+        logger.info("Registering new super user: {}", request.getUsername());
+
+        // Validate if username already exists
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new BusinessException("Username is already taken!", HttpStatus.BAD_REQUEST);
+        }
+
+        // Validate if email already exists
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new BusinessException("Email is already in use!", HttpStatus.BAD_REQUEST);
+        }
+
+        // Create new user with pending approval status
+        User user = new User(
+                request.getUsername(),
+                request.getEmail(),
+                passwordEncoder.encode(request.getPassword())
+        );
+        
+        user.setStatus(User.UserStatus.PENDING_APPROVAL);
+        user.setRequestedRole(RoleName.SUPER_USER);
+        user.setApprovalNotes(buildApprovalNotes(request));
+        user.setEnabled(false); // Disabled until approved
+
+        // Assign GUEST role temporarily
+        Set<Role> roles = new HashSet<>();
+        Role guestRole = roleRepository.findByName(RoleName.GUEST)
+                .orElseThrow(() -> new BusinessException("Guest role not found", HttpStatus.INTERNAL_SERVER_ERROR));
+        roles.add(guestRole);
+        user.setRoles(roles);
+
+        // Save user
+        user = userRepository.save(user);
+
+        logger.info("Super user registration submitted for approval: {}", user.getUsername());
+
+        return new AuthResponse(
+                null, // No token until approved
+                null, // No refresh token until approved
+                "Bearer",
+                convertToUserResponse(user),
+                "Registration submitted for admin approval"
+        );
+    }
+
+    /**
+     * Approve or reject a super user request (admin only).
+     */
+    public UserResponse approveSuperUser(ApprovalRequest request, Authentication adminAuth) {
+        logger.info("Processing super user approval for user ID: {}", request.getUserId());
+
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new BusinessException("User not found", HttpStatus.NOT_FOUND));
+
+        if (!user.isPendingApproval()) {
+            throw new BusinessException("User is not pending approval", HttpStatus.BAD_REQUEST);
+        }
+
+        UserDetailsImpl adminDetails = (UserDetailsImpl) adminAuth.getPrincipal();
+        User admin = userRepository.findById(adminDetails.getId())
+                .orElseThrow(() -> new BusinessException("Admin not found", HttpStatus.NOT_FOUND));
+
+        if (request.getApproved()) {
+            // Approve the user
+            user.setStatus(User.UserStatus.APPROVED);
+            user.setEnabled(true);
+            user.setApprovedBy(admin.getId());
+            user.setApprovedAt(LocalDateTime.now());
+            user.setApprovalNotes(request.getNotes());
+
+            // Assign SUPER_USER role
+            Set<Role> roles = new HashSet<>();
+            Role superUserRole = roleRepository.findByName(RoleName.SUPER_USER)
+                    .orElseThrow(() -> new BusinessException("Super user role not found", HttpStatus.INTERNAL_SERVER_ERROR));
+            roles.add(superUserRole);
+            user.setRoles(roles);
+
+            logger.info("Super user approved: {} by admin: {}", user.getUsername(), admin.getUsername());
+        } else {
+            // Reject the user
+            user.setStatus(User.UserStatus.REJECTED);
+            user.setApprovalNotes(request.getNotes());
+            user.setApprovedBy(admin.getId());
+            user.setApprovedAt(LocalDateTime.now());
+
+            logger.info("Super user rejected: {} by admin: {}", user.getUsername(), admin.getUsername());
+        }
+
+        user = userRepository.save(user);
+        return convertToUserResponse(user);
+    }
+
+    /**
+     * Get all pending super user requests (admin only).
+     */
+    public Set<UserResponse> getPendingApprovals() {
+        return userRepository.findByStatus(User.UserStatus.PENDING_APPROVAL)
+                .stream()
+                .map(this::convertToUserResponse)
+                .collect(Collectors.toSet());
+    }
+
+    /**
+     * Update user role (admin only).
+     */
+    public UserResponse updateUserRole(Long userId, RoleName newRole, Authentication adminAuth) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("User not found", HttpStatus.NOT_FOUND));
+
+        Role role = roleRepository.findByName(newRole)
+                .orElseThrow(() -> new BusinessException("Role not found", HttpStatus.NOT_FOUND));
+
+        Set<Role> roles = new HashSet<>();
+        roles.add(role);
+        user.setRoles(roles);
+
+        user = userRepository.save(user);
+
+        UserDetailsImpl adminDetails = (UserDetailsImpl) adminAuth.getPrincipal();
+        logger.info("User role updated: {} to {} by admin: {}", 
+                user.getUsername(), newRole, adminDetails.getUsername());
+
+        return convertToUserResponse(user);
+    }
+
+    /**
+     * Build approval notes from super user request.
+     */
+    private String buildApprovalNotes(SuperUserRequest request) {
+        StringBuilder notes = new StringBuilder();
+        notes.append("Justification: ").append(request.getJustification());
+        
+        if (request.getOrganization() != null && !request.getOrganization().isEmpty()) {
+            notes.append(" | Organization: ").append(request.getOrganization());
+        }
+        
+        if (request.getPosition() != null && !request.getPosition().isEmpty()) {
+            notes.append(" | Position: ").append(request.getPosition());
+        }
+        
+        return notes.toString();
+    }
+
+    /**
      * Convert User entity to UserResponse DTO.
      */
-    private UserResponse convertToUserResponse(User user) {
+    public UserResponse convertToUserResponse(User user) {
         Set<String> roleNames = user.getRoles().stream()
                 .map(role -> role.getName().name())
                 .collect(Collectors.toSet());

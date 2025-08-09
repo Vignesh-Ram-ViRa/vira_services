@@ -7,12 +7,15 @@
 Vira Services is a scalable Spring Boot backend designed to serve multiple mini projects from a single repository. Perfect for hobby dashboards, finance trackers, AI tools libraries, portfolio management, and any future projects you want to build.
 
 ### **Key Features**
-- ✅ **JWT Authentication** with refresh tokens
-- ✅ **Portfolio/Projects Management** CRUD service
+- ✅ **JWT Authentication** with refresh tokens and role-based access
+- ✅ **Google OAuth Integration** for seamless user authentication
+- ✅ **Guest Access** for public content viewing (no authentication required)
+- ✅ **4-Tier Role System** (GUEST, NORMAL_USER, SUPER_USER, ADMIN)
+- ✅ **Portfolio/Projects Management** with public/private project support
 - ✅ **Multi-Service Architecture** (easy to add new services)
 - ✅ **PostgreSQL Database** with Flyway migrations
 - ✅ **Railway Deployment** ready
-- ✅ **React Integration** friendly
+- ✅ **React Integration** friendly with role-based UI
 - ✅ **Corporate Environment** compatible
 - ✅ **Maven Wrapper** included (no Maven installation needed)
 
@@ -24,197 +27,207 @@ vira-services/
 │   ├── ViraServicesApplication.java
 │   ├── config/                   # Security, JWT, CORS configs
 │   ├── common/                   # Shared utilities & DTOs
-│   ├── auth/                     # Authentication service
+│   ├── auth/                     # Authentication service with role management
 │   └── portfolio/                # Portfolio/Projects service
 ├── src/main/resources/
 │   ├── application*.yml          # Environment configurations
-│   └── db/migration/             # Database migrations
+│   └── db/migration/             # Flyway database migrations
 ├── guides/                       # Project documentation
-│   ├── PROJECT_PLAN.md           # Complete project plan
-│   ├── LOCAL_DEVELOPMENT.md      # Local setup guide
-│   ├── DEPLOYMENT.md             # Railway deployment guide
-│   ├── TESTING_GUIDE.md          # Testing standards
-│   └── FRONTEND_INTEGRATION.md   # React integration guide
-└── README.md                     # This file
+├── mvnw, mvnw.cmd               # Maven wrapper scripts
+└── pom.xml                      # Maven dependencies and plugins
 ```
 
-## 🚀 **Quick Start**
+## 🚀 **Quick Start (5 minutes)**
 
-### **Prerequisites**
-- Java 17+ (OpenJDK recommended)
-- Git
-- Corporate network access (for Maven dependencies)
-
-### **1. Clone & Run Locally**
+### **1. Clone and Setup**
 ```bash
-# Clone the repository
-git clone <your-repo-url>
-cd vira-services
+git clone https://github.com/Vignesh-Ram-ViRa/vira_services.git
+cd vira_services
 
-# Run with Maven Wrapper (no Maven installation needed)
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+# Windows
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-17"
+.\mvnw.cmd spring-boot:run
 
-$env:JAVA_HOME = "C:\Program Files\Java\jdk-17"; $env:SPRING_PROFILES_ACTIVE = "dev"; $env:SERVER_PORT = "8081"; .\mvnw.cmd spring-boot:run
-
-# Application will start at: http://localhost:8080
+# Linux/Mac
+export JAVA_HOME=/path/to/java-17
+./mvnw spring-boot:run
 ```
 
-### **2. Access API Documentation**
-- **Swagger UI**: http://localhost:8080/swagger-ui/index.html
-- **H2 Console**: http://localhost:8080/h2-console (dev profile)
+### **2. Verify Installation**
 - **Health Check**: http://localhost:8080/actuator/health
+- **API Documentation**: http://localhost:8080/swagger-ui/index.html
+- **H2 Database Console**: http://localhost:8080/h2-console
 
 ### **3. Test Authentication**
 ```bash
-# Register user
+# Login as default admin
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}'
+
+# Register new user
 curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{"username":"testuser","email":"test@example.com","password":"password123"}'
-
-# Login user
-curl -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"testuser","password":"password123"}'
 ```
 
 ## 📖 **Documentation**
 
 | Document | Description |
 |----------|-------------|
-| **[PROJECT_PLAN.md](guides/PROJECT_PLAN.md)** | Complete project requirements and architecture plan |
-| **[LOCAL_DEVELOPMENT.md](guides/LOCAL_DEVELOPMENT.md)** | Detailed local development setup and testing guide |
-| **[DEPLOYMENT.md](guides/DEPLOYMENT.md)** | Step-by-step Railway deployment tutorial |
-| **[FRONTEND_INTEGRATION.md](guides/FRONTEND_INTEGRATION.md)** | React integration guide with code examples |
-| **[TESTING_GUIDE.md](guides/TESTING_GUIDE.md)** | Comprehensive testing standards and examples |
+| **[LOCAL_SETUP.md](guides/LOCAL_SETUP.md)** | 🚀 Complete local development setup (5-minute quick start) |
+| **[DEPLOYMENT.md](guides/DEPLOYMENT.md)** | 🌐 Production deployment with security best practices |
+| **[GOOGLE_OAUTH.md](guides/GOOGLE_OAUTH.md)** | 🔑 Google OAuth setup and React integration guide |
+| **[REACT_INTEGRATION.md](guides/REACT_INTEGRATION.md)** | ⚛️ React integration with role-based UI components |
+| **[ROLE_MANAGEMENT.md](guides/ROLE_MANAGEMENT.md)** | 👥 User roles, permissions, and approval workflows |
+| **[SECURITY.md](guides/SECURITY.md)** | 🔐 Production security guide and best practices |
+| **[NEW_SERVICE_GUIDE.md](guides/NEW_SERVICE_GUIDE.md)** | 🛠️ Adding new services to the backend |
+| **[TESTING_GUIDE.md](guides/TESTING_GUIDE.md)** | 🧪 Comprehensive testing standards and examples |
 
-## 🔐 **Services Available**
+## 🔐 **Role-Based Access Control**
 
-### **Authentication Service** (`/api/auth`)
+### **Role Hierarchy**
+```
+ADMIN > SUPER_USER > NORMAL_USER > GUEST
+```
+
+### **Default Users**
+- **Admin**: `admin/admin123` (change password in production!)
+- **Auto-Role Assignment**: New registrations get `NORMAL_USER` role
+- **Super User Process**: Requires admin approval
+
+### **Role Permissions**
+| Feature | GUEST | NORMAL_USER | SUPER_USER | ADMIN |
+|---------|-------|-------------|------------|-------|
+| Public content | ✅ | ✅ | ✅ | ✅ |
+| Own projects | ❌ | ✅ | ❌ | ✅ |
+| All projects (read) | ❌ | ❌ | ✅ | ✅ |
+| User management | ❌ | ❌ | ❌ | ✅ |
+
+## 🔧 **Services Available**
+
+### **1. Authentication Service** (`/api/auth`)
 - User registration and login
-- JWT token generation and refresh
-- Role-based access control
-- Secure password hashing
+- Google OAuth integration for seamless authentication
+- JWT token management with refresh tokens
+- Role-based access control (4 roles)
+- Admin approval workflow for super users
 
-**Endpoints:**
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-- `POST /api/auth/refresh` - Refresh JWT token
-- `POST /api/auth/logout` - Logout user
-- `GET /api/auth/me` - Get current user info
-
-### **Portfolio Service** (`/api/portfolio`)
-- Project/portfolio management
-- CRUD operations for projects
-- Featured projects and categorization
+### **2. Portfolio Service** (`/api/portfolio`)
+- CRUD operations for personal projects
+- Public/private project visibility control
 - Technology stack tracking
+- Project categorization and status management
+- User-specific project filtering
 
-**Endpoints:**
-- `GET /api/portfolio/projects` - Get all projects
-- `POST /api/portfolio/projects` - Create new project
-- `GET /api/portfolio/projects/{id}` - Get specific project
-- `PUT /api/portfolio/projects/{id}` - Update project
-- `DELETE /api/portfolio/projects/{id}` - Delete project
-- `GET /api/portfolio/projects/featured` - Get featured projects
+### **3. Public Service** (`/api/public`) - No Auth Required
+- Guest access to public portfolio projects
+- Public project statistics and analytics
+- Featured projects showcase
+- Technology-based project filtering
 
-## 🗄️ **Database Schema**
+### **4. Admin Service** (`/api/admin`)
+- User role management
+- Super user approval workflow
+- System administration endpoints
+
+## 🏗️ **Database Schema Overview**
 
 ### **Authentication Tables**
-- `auth_users` - User accounts
-- `auth_roles` - User roles
+- `auth_users` - User accounts with role relationships
+- `auth_roles` - Role definitions (GUEST, NORMAL_USER, SUPER_USER, ADMIN)
 - `auth_user_roles` - User-role relationships
-- `auth_refresh_tokens` - JWT refresh tokens
+- `auth_refresh_tokens` - JWT refresh token management
 
 ### **Portfolio Tables**
-- `portfolio_projects` - Project/portfolio items
+- `portfolio_projects` - User projects and portfolios
+- `portfolio_project_technologies` - Technology associations
 
-**Sample Project Record:**
-```json
-{
-  "title": "Enterprise Task Management System",
-  "description": "Comprehensive task management platform...",
-  "technologies": ["React", "Spring Boot", "PostgreSQL"],
-  "status": "completed",
-  "category": "Full-Stack Application",
-  "link": "https://demo.com",
-  "github": "https://github.com/user/repo",
-  "featured": true,
-  "year": 2024
-}
+## 🌐 **API Overview**
+
+### **Authentication Endpoints**
+```bash
+POST /api/auth/register          # Register new user (NORMAL_USER role)
+POST /api/auth/register-super-user  # Request super user access (requires approval)
+POST /api/auth/login             # User authentication
+POST /api/auth/refresh           # Refresh JWT tokens
+POST /api/auth/logout            # Invalidate tokens
+GET  /api/auth/me               # Get current user info
+```
+
+### **Portfolio Endpoints**
+```bash
+GET    /api/portfolio/projects        # Get user projects (paginated)
+POST   /api/portfolio/projects        # Create new project
+GET    /api/portfolio/projects/{id}   # Get specific project
+PUT    /api/portfolio/projects/{id}   # Update project
+DELETE /api/portfolio/projects/{id}   # Delete project
+GET    /api/portfolio/projects/stats  # Get project statistics
+```
+
+### **Admin Endpoints**
+```bash
+GET  /api/admin/pending-approvals     # Get pending super user requests
+POST /api/admin/approve-super-user    # Approve/reject super user
+PUT  /api/admin/users/{id}/role       # Update user role directly
+POST /api/admin/register-super-user   # Create super user (admin bypass)
 ```
 
 ## 🏢 **Corporate Environment Support**
 
-This project is designed to work in corporate environments:
-
+### **Network-Friendly Features**
 - ✅ **Maven Wrapper** - No admin installation required
 - ✅ **Proxy Support** - Configurable for corporate networks
 - ✅ **H2 Database** - No external database setup needed for development
 - ✅ **Spring Initializr Fallback** - Alternative if network restrictions exist
 
-**Network Issues?** See [LOCAL_DEVELOPMENT.md](guides/LOCAL_DEVELOPMENT.md#corporate-environment-considerations) for troubleshooting.
+**Network Issues?** See [LOCAL_SETUP.md](guides/LOCAL_SETUP.md) for troubleshooting.
 
-## ☁️ **Deployment**
+## ⚛️ **React Integration Example**
 
-### **Railway (Recommended)**
-- **Free Tier**: 500 hours/month + 1GB PostgreSQL
-- **Auto-deploy**: Connects to GitHub for automatic deployments
-- **Zero Config**: Automatic PostgreSQL provisioning
-
-**Deploy Steps:**
-1. Push code to GitHub
-2. Connect Railway to your repository
-3. Add PostgreSQL service
-4. Configure environment variables
-5. Your API is live!
-
-**Detailed Guide:** [DEPLOYMENT.md](DEPLOYMENT.md)
-
-## ⚛️ **Frontend Integration**
-
-### **React Integration**
-Complete React setup with:
-- Authentication context and hooks
-- API service layer
-- Portfolio management components
-- Error handling and loading states
-
-**Key Features:**
+### **Authentication Context**
 ```javascript
-// Authentication
-const { login, register, logout, user, isAuthenticated } = useAuth();
+const { login, user, hasRole, logout } = useAuth();
 
-// Portfolio Management  
-const { projects, createProject, updateProject, deleteProject } = usePortfolio();
-
-// API Calls
-const response = await apiCall('/api/portfolio/projects', {
-  method: 'POST',
-  body: JSON.stringify(projectData)
-});
+// Role-based rendering
+{hasRole('ADMIN') && <AdminPanel />}
+{hasRole('SUPER_USER') && <AnalyticsView />}
+{hasRole('NORMAL_USER') && <Portfolio />}
 ```
 
-**Complete Guide:** [FRONTEND_INTEGRATION.md](guides/FRONTEND_INTEGRATION.md)
+### **API Integration**
+```javascript
+// Authenticated API calls
+const response = await portfolioAPI.getProjects({
+  page: 0, size: 10, sortBy: 'createdAt'
+});
 
-## 🔄 **Adding New Services**
+// Role-based API access
+if (hasRole('ADMIN')) {
+  await adminAPI.getPendingApprovals();
+}
+```
 
-The architecture supports easy addition of new services:
+**Complete Guide:** [REACT_INTEGRATION.md](guides/REACT_INTEGRATION.md)
 
-### **1. Create Service Package**
+## 🔧 **Adding New Services**
+
+### **1. Create Package Structure**
 ```
 src/main/java/com/vira/newservice/
-├── controller/NewServiceController.java
-├── service/NewServiceService.java  
-├── repository/NewServiceRepository.java
-├── model/NewServiceEntity.java
-└── dto/NewServiceDto.java
+├── controller/
+├── service/
+├── repository/
+├── model/
+└── dto/
 ```
 
-### **2. Add Database Migration**
+### **2. Create Database Migration**
 ```sql
 -- src/main/resources/db/migration/V3__Create_newservice_tables.sql
-CREATE TABLE newservice_items (
+CREATE TABLE newservice_data (
     id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(100) NOT NULL,
     user_id BIGINT REFERENCES auth_users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -225,6 +238,7 @@ CREATE TABLE newservice_items (
 @RestController
 @RequestMapping("/api/newservice")
 @CrossOrigin(origins = {"http://localhost:3000"})
+@PreAuthorize("hasRole('NORMAL_USER') or hasRole('SUPER_USER') or hasRole('ADMIN')")
 public class NewServiceController {
     // CRUD endpoints
 }
@@ -249,94 +263,86 @@ The architecture supports easy addition of:
 # Run all tests
 ./mvnw test
 
-# Run tests with coverage
+# Generate test coverage report
 ./mvnw test jacoco:report
 
-# Build for production
+# Clean build
 ./mvnw clean package
+```
 
-# Build without running tests (not recommended)
-./mvnw clean package -DskipTests
+### **Database Management**
+```bash
+# Access H2 console (development)
+# URL: http://localhost:8080/h2-console
+# JDBC URL: jdbc:h2:mem:viradb
+# Username: sa, Password: (empty)
+
+# Run database migrations
+./mvnw flyway:migrate
+
+# Generate migration from JPA entities
+./mvnw flyway:baseline
 ```
 
 ### **API Testing**
-- **Swagger UI**: Interactive API documentation
-- **Postman**: Import collection from Swagger
-- **cURL**: Command-line testing
-- **H2 Console**: Database inspection
+```bash
+# Health check
+curl http://localhost:8080/actuator/health
+
+# API documentation
+open http://localhost:8080/swagger-ui/index.html
+
+# Test authentication
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin123"}'
+```
+
+## 🎯 **Production Ready Features**
+
+### **Security**
+- ✅ **JWT Authentication** with configurable expiration
+- ✅ **Role-Based Authorization** with 4-tier hierarchy
+- ✅ **BCrypt Password Hashing** with high cost factor
+- ✅ **CORS Configuration** for production domains
+- ✅ **Security Headers** and XSS protection
+- ✅ **Admin User Management** with secure defaults
+
+### **Database**
+- ✅ **Flyway Migrations** for version control
+- ✅ **Connection Pooling** (HikariCP)
+- ✅ **Automatic Timestamps** for audit trails
+- ✅ **Relationship Integrity** with foreign keys
+- ✅ **Indexing Strategy** for performance
 
 ### **Monitoring**
-- **Actuator Endpoints**: Health, metrics, info
-- **Application Logs**: Structured logging with profiles
-- **Railway Metrics**: CPU, memory, request tracking
+- ✅ **Spring Boot Actuator** for health checks
+- ✅ **Comprehensive Logging** with security events
+- ✅ **Error Handling** with consistent API responses
+- ✅ **Request/Response Validation** 
 
-## 📊 **Production Readiness**
+### **Testing**
+- ✅ **80% Code Coverage** requirement
+- ✅ **Unit Tests** for all service classes
+- ✅ **Integration Tests** for API endpoints
+- ✅ **Security Tests** for authentication
+- ✅ **Repository Tests** for database operations
 
-### **Security Features**
-- ✅ JWT authentication with refresh tokens
-- ✅ Password hashing with BCrypt
-- ✅ CORS configuration for frontend domains
-- ✅ Input validation and sanitization
-- ✅ Secure headers and HTTPS support
+## 🚀 **Quick Links**
 
-### **Performance Features**
-- ✅ Database connection pooling
-- ✅ Flyway migrations for schema versioning
-- ✅ Environment-specific configurations
-- ✅ Caching for frequently accessed data
-- ✅ Pagination for large datasets
+- **Start Development**: [LOCAL_SETUP.md](guides/LOCAL_SETUP.md)
+- **Deploy to Production**: [DEPLOYMENT.md](guides/DEPLOYMENT.md)
+- **Integrate with React**: [REACT_INTEGRATION.md](guides/REACT_INTEGRATION.md)
+- **Manage User Roles**: [ROLE_MANAGEMENT.md](guides/ROLE_MANAGEMENT.md)
+- **Security Best Practices**: [SECURITY.md](guides/SECURITY.md)
+- **Add New Service**: [NEW_SERVICE_GUIDE.md](guides/NEW_SERVICE_GUIDE.md)
 
-### **Observability**
-- ✅ Structured logging with different levels
-- ✅ Health check endpoints
-- ✅ Application metrics via Actuator
-- ✅ Error tracking and monitoring
-
-### **Quality Assurance**
-- ✅ Comprehensive unit test coverage (minimum 80%)
-- ✅ Integration tests for all API endpoints
-- ✅ Automated test execution in CI/CD
-- ✅ Code quality checks and static analysis
-- ✅ Test categorization (unit vs integration vs e2e)
-
-## 🤝 **Contributing**
-
-### **Adding New Features**
-1. Create feature branch
-2. Add service in new package
-3. Add database migrations
-4. Update documentation
-5. Test locally and in production
-6. Submit pull request
-
-### **Code Standards**
-- Follow Spring Boot best practices
-- Use consistent naming conventions
-- Add comprehensive documentation
-- Include error handling
-- **Write comprehensive unit tests** (minimum 80% coverage)
-- **Write integration tests** for all API endpoints
-- Use proper test categorization (unit vs integration)
-- Mock external dependencies in unit tests
-
-## 📞 **Support**
-
-- **Documentation**: Check the guides in this repository
-- **Issues**: Create GitHub issues for bugs or feature requests
-- **Railway Support**: Use Railway's Discord community
-
-## 🔗 **Quick Links**
-
-- **Local Development**: [LOCAL_DEVELOPMENT.md](guides/LOCAL_DEVELOPMENT.md)
-- **Deployment Guide**: [DEPLOYMENT.md](guides/DEPLOYMENT.md)
-- **React Integration**: [FRONTEND_INTEGRATION.md](guides/FRONTEND_INTEGRATION.md)
-- **Testing Guide**: [TESTING_GUIDE.md](guides/TESTING_GUIDE.md)
-- **Project Plan**: [PROJECT_PLAN.md](guides/PROJECT_PLAN.md)
-
----
-
-**🚀 Ready to start development?** Follow the [LOCAL_DEVELOPMENT.md](guides/LOCAL_DEVELOPMENT.md) guide to get started!
+**🚀 Ready to start development?** Follow the [LOCAL_SETUP.md](guides/LOCAL_SETUP.md) guide to get started!
 
 **🌐 Ready to deploy?** Follow the [DEPLOYMENT.md](guides/DEPLOYMENT.md) guide for Railway deployment!
 
-**⚛️ Building a React frontend?** Check out [FRONTEND_INTEGRATION.md](guides/FRONTEND_INTEGRATION.md)! 
+**⚛️ Building a React frontend?** Check out [REACT_INTEGRATION.md](guides/REACT_INTEGRATION.md)!
+
+---
+
+**🎯 Built for scalability, security, and developer productivity. Start building amazing projects today!** 🚀 

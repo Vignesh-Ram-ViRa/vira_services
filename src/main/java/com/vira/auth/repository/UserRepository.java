@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -57,4 +58,25 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     @Query("SELECT COUNT(u) FROM User u WHERE u.enabled = true")
     Long countEnabledUsers();
+
+    /**
+     * Find user by Google ID.
+     */
+    Optional<User> findByGoogleId(String googleId);
+
+    /**
+     * Find users by status.
+     */
+    List<User> findByStatus(User.UserStatus status);
+
+    /**
+     * Check if Google ID exists.
+     */
+    Boolean existsByGoogleId(String googleId);
+
+    /**
+     * Count users by status.
+     */
+    @Query("SELECT COUNT(u) FROM User u WHERE u.status = :status")
+    Long countByStatus(@Param("status") User.UserStatus status);
 } 

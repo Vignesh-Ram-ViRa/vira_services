@@ -24,9 +24,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/portfolio")
-@Tag(name = "Portfolio", description = "Project portfolio management endpoints")
+@CrossOrigin(origins = {"http://localhost:8080", "http://localhost:3000", "http://localhost:3001"}, allowCredentials = "true")
+@Tag(name = "Portfolio", description = "Project portfolio management endpoints. Requires NORMAL_USER, SUPER_USER, or ADMIN role. Use the 🔒 Authorize button with your JWT token.")
 @SecurityRequirement(name = "Bearer Authentication")
-@PreAuthorize("hasRole('USER')")
+@PreAuthorize("hasRole('NORMAL_USER') or hasRole('SUPER_USER') or hasRole('ADMIN')")
 public class ProjectController {
     
     private final ProjectService projectService;

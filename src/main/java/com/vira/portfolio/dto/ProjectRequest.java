@@ -41,6 +41,8 @@ public class ProjectRequest {
     
     private Boolean featured = false;
 
+    private Boolean isPrivate = false;
+
     // Constructors
     public ProjectRequest() {}
 
@@ -137,5 +139,13 @@ public class ProjectRequest {
 
     public void setFeatured(Boolean featured) {
         this.featured = featured;
+    }
+
+    public Boolean getPrivate() {
+        return isPrivate;
+    }
+
+    public void setPrivate(Boolean aPrivate) {
+        isPrivate = aPrivate;
     }
 } 
