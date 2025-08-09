@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: vira-services
+    env: java
+    plan: free
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -Dserver.port=$PORT -Dspring.profiles.active=prod -jar target/vira-services-0.0.1-SNAPSHOT.jar
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: JWT_SECRET
+        value: YXNkZmFzZGZhc2RmYXNkZmFzZGZhc2RmYXNkZmFzZGZhc2RmYXNkZmFzZGZhc2RmYXNkZmFzZGY=
+      - key: ADMIN_PASSWORD
+        value: SecureAdmin123!
+      - key: FRONTEND_URL
+        value: https://localhost:3000
+      # Supabase Database Configuration (Set these after creating Supabase project)
+      - key: SUPABASE_DATABASE_URL
+        value: postgresql://postgres.your-project-ref:password@aws-0-region.pooler.supabase.com:6543/postgres
+      - key: SUPABASE_DATABASE_USERNAME
+        value: postgres.your-project-ref
+      - key: SUPABASE_DATABASE_PASSWORD
+        value: your-supabase-password
+
+# No database service needed - using external Supabase PostgreSQL
+# This eliminates the 30-day expiration issue completely! 

@@ -2,11 +2,11 @@ server:
   port: ${PORT:8080}
 
 spring:
-  # PostgreSQL Database for Production
+  # Supabase PostgreSQL Database for Production (Permanent, No Expiration)
   datasource:
-    url: ${DATABASE_URL}
-    username: ${DATABASE_USERNAME}
-    password: ${DATABASE_PASSWORD}
+    url: ${SUPABASE_DATABASE_URL}
+    username: ${SUPABASE_DATABASE_USERNAME}
+    password: ${SUPABASE_DATABASE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -14,6 +14,8 @@ spring:
       connection-timeout: 20000
       idle-timeout: 300000
       max-lifetime: 1200000
+      # Supabase specific SSL configuration
+      ssl-mode: require
   
   jpa:
     hibernate:
@@ -32,6 +34,8 @@ spring:
     enabled: true
     baseline-on-migrate: true
     validate-on-migrate: true
+    # Supabase requires SSL connections
+    url: ${SUPABASE_DATABASE_URL}
 
 # CORS Configuration for Production
 cors:
