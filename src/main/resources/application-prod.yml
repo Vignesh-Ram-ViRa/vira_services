@@ -37,19 +37,46 @@ spring:
     # Supabase requires SSL connections
     url: ${SUPABASE_DATABASE_URL}
 
-# CORS Configuration for Production
+# CORS Configuration for Multiple Frontend Applications
 cors:
   allowed-origins:
-    - ${FRONTEND_URL:https://your-frontend-domain.com}
+    # Development environments (add more as needed)
+    - "http://localhost:3000"      # React default
+    - "http://localhost:3001"      # Second React app
+    - "http://localhost:3002"      # Third React app
+    - "http://localhost:4200"      # Angular CLI default
+    - "http://localhost:5173"      # Vite default
+    - "http://localhost:5174"      # Second Vite instance
+    - "http://localhost:8080"      # Spring Boot, Vue CLI
+    - "http://localhost:8081"      # Second Spring Boot
+    - "http://localhost:9000"      # Custom port
+    - "http://127.0.0.1:3000"      # Alternative localhost
+    - "http://127.0.0.1:5173"      # Alternative Vite
+    - "http://192.168.1.100:3000"  # Local network access (replace with your IP)
+    # Production environments (configure via environment variables)
+    - ${FRONTEND_URL_1:https://your-portfolio.netlify.app}
+    - ${FRONTEND_URL_2:https://your-business-app.vercel.app}
+    - ${FRONTEND_URL_3:https://your-third-app.com}
+    - ${FRONTEND_URL_4:}
+    - ${FRONTEND_URL_5:}
+    # Add more production URLs as needed
+    - ${FRONTEND_URL_6:}
+    - ${FRONTEND_URL_7:}
+    - ${FRONTEND_URL_8:}
+    - ${FRONTEND_URL_9:}
+    - ${FRONTEND_URL_10:}
   allowed-methods:
     - GET
     - POST
     - PUT
     - DELETE
     - OPTIONS
+    - PATCH
   allowed-headers:
     - "*"
   allow-credentials: true
+  # Allow preflight requests to be cached for 1 hour
+  max-age: 3600
 
 # Logging for Production
 logging:

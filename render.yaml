@@ -12,8 +12,17 @@ services:
         value: YXNkZmFzZGZhc2RmYXNkZmFzZGZhc2RmYXNkZmFzZGZhc2RmYXNkZmFzZGZhc2RmYXNkZmFzZGY=
       - key: ADMIN_PASSWORD
         value: SecureAdmin123!
-      - key: FRONTEND_URL
-        value: https://localhost:3000
+      # Multiple Frontend URLs for different applications
+      - key: FRONTEND_URL_1
+        value: https://your-portfolio.netlify.app
+      - key: FRONTEND_URL_2
+        value: https://your-business-app.vercel.app
+      - key: FRONTEND_URL_3
+        value: https://your-third-app.com
+      - key: FRONTEND_URL_4
+        value: https://your-fourth-app.com
+      - key: FRONTEND_URL_5
+        value: https://your-fifth-app.com
       # Supabase Database Configuration (Set these after creating Supabase project)
       - key: SUPABASE_DATABASE_URL
         value: postgresql://postgres.your-project-ref:password@aws-0-region.pooler.supabase.com:6543/postgres

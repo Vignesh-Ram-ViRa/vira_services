@@ -10,6 +10,7 @@ All configuration files have been updated for **Render + Supabase** deployment:
 - ✅ Spring Boot app ready for permanent database
 - ✅ JWT security configured
 - ✅ Admin user auto-creation enabled
+- ✅ **Multi-frontend CORS** configured for centralized auth service
 
 ---
 
@@ -79,8 +80,14 @@ JWT_SECRET=YXNkZmFzZGZhc2RmYXNkZmFzZGZhc2RmYXNkZmFzZGZhc2RmYXNkZmFzZGZhc2RmYXNkZ
 
 ADMIN_PASSWORD=SecureAdmin123!
 
-FRONTEND_URL=https://localhost:3000
+# Multiple Frontend URLs (configure as you deploy different apps)
+FRONTEND_URL_1=https://your-portfolio.netlify.app
+FRONTEND_URL_2=https://your-business-app.vercel.app
+FRONTEND_URL_3=https://your-third-app.com
+FRONTEND_URL_4=https://your-fourth-app.com
+FRONTEND_URL_5=https://your-fifth-app.com
 
+# Supabase Database Connection
 SUPABASE_DATABASE_URL=postgresql://postgres.YOUR-PROJECT-REF:[YOUR-PASSWORD]@aws-0-REGION.pooler.supabase.com:6543/postgres
 
 SUPABASE_DATABASE_USERNAME=postgres.YOUR-PROJECT-REF
@@ -88,7 +95,10 @@ SUPABASE_DATABASE_USERNAME=postgres.YOUR-PROJECT-REF
 SUPABASE_DATABASE_PASSWORD=YOUR-SUPABASE-PASSWORD
 ```
 
-**🔥 Important:** Replace the Supabase values with your actual connection details from Step 1!
+**🔥 Important:** 
+- Replace the Supabase values with your actual connection details from Step 1!
+- Update frontend URLs as you deploy each application
+- Leave unused frontend URL slots empty (they'll be ignored)
 
 ---
 
@@ -128,44 +138,116 @@ SUPABASE_DATABASE_PASSWORD=YOUR-SUPABASE-PASSWORD
 
 ---
 
+## 🌐 **Multi-Frontend Configuration**
+
+### **CORS is Pre-configured for:**
+
+**Development (Automatic):**
+- `http://localhost:3000` (React default)
+- `http://localhost:3001` (Second React app)
+- `http://localhost:5173` (Vite default)
+- `http://localhost:8080` (Spring Boot, Vue)
+- `http://127.0.0.1:3000` (Alternative localhost)
+- `http://127.0.0.1:5173` (Alternative Vite)
+
+**Production (Configure via Environment Variables):**
+- `FRONTEND_URL_1` → Your portfolio site
+- `FRONTEND_URL_2` → Your business application
+- `FRONTEND_URL_3` → Your third application
+- `FRONTEND_URL_4` → Your fourth application
+- `FRONTEND_URL_5` → Your fifth application
+
+### **Adding New Frontend Applications:**
+
+1. **Deploy your frontend** to Netlify/Vercel/etc.
+2. **Get the production URL** (e.g., `https://my-app.netlify.app`)
+3. **Update environment variable** in Render:
+   - Go to your service → **Environment**
+   - Set `FRONTEND_URL_1=https://my-app.netlify.app`
+   - Save changes (auto-redeploys)
+
+4. **Your frontend can now authenticate** with your centralized auth service!
+
+---
+
 ## 🎉 **SUCCESS! You're Done!**
 
 ### **What You Now Have:**
 
-✅ **Live API**: `https://vira-services-xxxx.onrender.com`  
+✅ **Centralized Auth API**: `https://vira-services-xxxx.onrender.com`  
 ✅ **API Docs**: `https://your-app-url.onrender.com/swagger-ui/index.html`  
 ✅ **Database Dashboard**: `https://app.supabase.com/project/your-project`  
 ✅ **Admin Account**: username: `admin`, password: `SecureAdmin123!`  
+✅ **Multi-Frontend Support**: Configure unlimited frontend applications  
 
 ### **Zero Maintenance Features:**
 - 🔄 **Auto-resume**: Both services wake up automatically when accessed
 - 💾 **Permanent storage**: Database never expires (unlike other free options)
 - 🔒 **Enterprise security**: HTTPS, SSL database connections, JWT tokens
-- 💰 **$0 cost**: Forever free within usage limits (perfect for 5 users)
+- 💰 **$0 cost**: Forever free within usage limits (perfect for multiple apps)
+- 🌐 **Multi-domain CORS**: Support for unlimited frontend applications
 - 📈 **Room to grow**: Easy upgrade path when needed
 
 ---
 
-## 📱 **Next Steps**
+## 📱 **Using Your Centralized Auth Service**
+
+### **In Your Frontend Applications:**
+
+```javascript
+// Example API calls to your centralized auth service
+const API_BASE_URL = 'https://vira-services-xxxx.onrender.com/api';
+
+// Login
+const login = async (username, password) => {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ username, password })
+  });
+  return response.json();
+};
+
+// Register
+const register = async (username, email, password) => {
+  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ username, email, password })
+  });
+  return response.json();
+};
+
+// Get user profile (with JWT token)
+const getProfile = async (token) => {
+  const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+    credentials: 'include'
+  });
+  return response.json();
+};
+```
 
 ### **For Development:**
-1. **Update your local development** to connect to this database (optional)
-2. **Deploy your React frontend** to Netlify/Vercel
-3. **Update FRONTEND_URL** environment variable when frontend is live
+1. **Start your frontend** on any localhost port
+2. **CORS is pre-configured** for common development ports
+3. **No additional setup** needed for local development
 
-### **For Production Use:**
-- ✅ **Share API URL** with frontend developers
-- ✅ **Use Swagger UI** to test and document endpoints  
-- ✅ **Monitor usage** in both Render and Supabase dashboards
-- ✅ **Manage users** via Supabase Table Editor or your API
+### **For Production:**
+1. **Deploy your frontend** to any hosting platform
+2. **Add the production URL** as a new environment variable
+3. **Redeploy** (happens automatically when you save env vars)
+4. **Your frontend can now authenticate** with the centralized service
 
 ---
 
 ## 🚨 **Important URLs to Save**
 
 ```bash
-# Your Live Backend
-API_URL=https://vira-services-xxxx.onrender.com
+# Your Centralized Auth Service
+AUTH_API_URL=https://vira-services-xxxx.onrender.com
 
 # API Documentation  
 DOCS_URL=https://vira-services-xxxx.onrender.com/swagger-ui/index.html
@@ -182,21 +264,22 @@ RENDER_URL=https://dashboard.render.com/web/your-service-id
 
 ---
 
-## 🎯 **Performance Expectations**
+## 🎯 **Perfect for Multiple Applications**
 
-### **Normal Operation:**
-- ⚡ **Active usage**: Instant API responses
-- 🕐 **After 15min idle**: 30-60 second wake-up time
-- 📊 **Database**: Always fast (Supabase connection pooling)
+### **Use Cases:**
+- 👤 **Personal Portfolio** + **Business Website** + **Side Projects**
+- 🏢 **Main App** + **Admin Dashboard** + **Landing Page**
+- 🛍️ **E-commerce** + **Blog** + **Documentation Site**
+- 🎨 **Multiple Client Projects** with shared authentication
 
-### **This is PERFECT for:**
-- 👤 Personal portfolios
-- 🏢 Small business websites  
-- 🧪 Demo applications
-- 👥 Up to 5 concurrent users
-- 🎨 Hobby projects
+### **Benefits:**
+- ✅ **Single source of truth** for user accounts
+- ✅ **Consistent authentication** across all your applications
+- ✅ **Centralized user management** via Supabase dashboard
+- ✅ **JWT tokens work** across all your frontend applications
+- ✅ **Scale infinitely** - add new frontends without backend changes
 
-**Congratulations! Your production-ready, maintenance-free backend is live!** 🎉
+**Congratulations! Your centralized, maintenance-free auth service is live and ready to serve multiple applications!** 🎉
 
 ---
 
