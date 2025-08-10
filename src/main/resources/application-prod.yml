@@ -1,5 +1,11 @@
 server:
   port: ${PORT:8080}
+  servlet:
+    session:
+      cookie:
+        secure: true
+        http-only: true
+        same-site: strict
 
 spring:
   # Supabase PostgreSQL Database for Production (Permanent, No Expiration)
@@ -88,18 +94,9 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 
-# Security Headers
-server:
-  servlet:
-    session:
-      cookie:
-        secure: true
-        http-only: true
-        same-site: strict
-
 # JWT Configuration for Production
 app:
   jwt:
     secret: ${JWT_SECRET}
     expiration: 86400000  # 24 hours
-    refresh-expiration: 604800000  # 7 days 
+    refresh-expiration: 604800000  # 7 days
