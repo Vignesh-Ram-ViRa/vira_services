@@ -60,7 +60,7 @@ public class Project {
 
     @Min(value = 2000, message = "Year must be between 2000 and 2030")
     @Max(value = 2030, message = "Year must be between 2000 and 2030")
-    @Column(name = "project_year")
+    @Column(name = "year", nullable = true)
     private Integer year;
 
     @Column(name = "featured", nullable = false)

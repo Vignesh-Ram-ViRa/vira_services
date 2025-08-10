@@ -42,6 +42,22 @@ spring:
     validate-on-migrate: true
     # Supabase requires SSL connections
     url: ${SUPABASE_DATABASE_URL}
+    user: ${SUPABASE_DATABASE_USERNAME}
+    password: ${SUPABASE_DATABASE_PASSWORD}
+
+  # Google OAuth2 Configuration (Production)
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:disabled}
+            client-secret: ${GOOGLE_CLIENT_SECRET:disabled}
+            redirect-uri: "{baseUrl}/api/auth/oauth2/callback/google"
+            scope:
+              - openid
+              - profile
+              - email
 
 # CORS Configuration for Multiple Frontend Applications
 cors:

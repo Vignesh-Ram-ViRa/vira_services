@@ -102,11 +102,15 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfig.corsConfigurationSource()))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // OAuth2 login configuration
-                .oauth2Login(oauth2 -> oauth2
-                    .successHandler(oAuth2SuccessHandler())
-                    .failureUrl("/api/auth/oauth2/error")
-                );
+                // OAuth2 login configuration (conditional)
+                .oauth2Login(oauth2 -> {
+                    try {
+                        oauth2.successHandler(oAuth2SuccessHandler())
+                            .failureUrl("/api/auth/oauth2/error");
+                    } catch (Exception e) {
+                        // OAuth2 not configured, skip silently
+                    }
+                });
 
         // Add JWT filter
         http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
