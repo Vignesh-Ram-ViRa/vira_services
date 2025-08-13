@@ -1,0 +1,75 @@
+{
+  "operation_type": "modify_service",
+  "target_service": {
+    "name": "blog",
+    "table": "blog_posts",
+    "entity": "BlogPost"
+  },
+  "field_operations": [
+    {
+      "action": "update",
+      "field_name": "title",
+      "changes": {
+        "type": "VARCHAR(500)",
+        "validation": {
+          "maxLength": 500,
+          "required": true,
+          "sanitize": true
+        }
+      },
+      "reason": "Increase title length limit from 255 to 500 characters"
+    },
+    {
+      "action": "update",
+      "field_name": "content",
+      "changes": {
+        "validation": {
+          "required": true,
+          "sanitize": true,
+          "maxLength": 50000
+        }
+      },
+      "reason": "Add content length validation and ensure sanitization"
+    },
+    {
+      "action": "add",
+      "field": {
+        "name": "reading_time",
+        "type": "INTEGER",
+        "javaType": "Integer",
+        "nullable": true,
+        "validation": {
+          "min": 0
+        },
+        "description": "Estimated reading time in minutes",
+        "default_value": "NULL"
+      }
+    },
+    {
+      "action": "add",
+      "field": {
+        "name": "meta_description",
+        "type": "VARCHAR(160)",
+        "javaType": "String",
+        "nullable": true,
+        "validation": {
+          "maxLength": 160,
+          "sanitize": true
+        },
+        "description": "SEO meta description for the blog post",
+        "default_value": "NULL"
+      }
+    },
+    {
+      "action": "remove",
+      "field_name": "old_summary_field",
+      "confirm_removal": true,
+      "reason": "Replaced by excerpt field - no longer needed"
+    }
+  ],
+  "options": {
+    "dry_run": false,
+    "backup_enabled": true,
+    "auto_confirm": false
+  }
+} 

@@ -1,0 +1,30 @@
+{
+  "operation_type": "modify_service",
+  "target_service": {
+    "name": "inventory",
+    "table": "inventory_items",
+    "entity": "InventoryItem"
+  },
+  "field_operations": [
+    {
+      "action": "add",
+      "field": {
+        "name": "barcode",
+        "type": "VARCHAR(50)",
+        "javaType": "String",
+        "nullable": true,
+        "validation": {
+          "maxLength": 50,
+          "pattern": "^[0-9]+$"
+        },
+        "description": "Product barcode for scanning",
+        "default_value": "NULL"
+      }
+    }
+  ],
+  "options": {
+    "dry_run": false,
+    "backup_enabled": true,
+    "auto_confirm": false
+  }
+} 

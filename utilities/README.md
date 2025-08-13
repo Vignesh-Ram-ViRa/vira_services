@@ -8,12 +8,15 @@ This utility generates production-ready Spring Boot code for your Vira Services 
 
 - [Features](#features)
 - [Quick Start](#quick-start)
+- [Field Management](#field-management)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [Service Definition Format](#service-definition-format)
+- [Field Operations Format](#field-operations-format)
 - [Examples](#examples)
 - [Generated Files](#generated-files)
+- [Testing](#testing)
 - [Troubleshooting](#troubleshooting)
 - [Advanced Usage](#advanced-usage)
 - [Contributing](#contributing)
@@ -30,6 +33,14 @@ This utility generates production-ready Spring Boot code for your Vira Services 
 - **Unit Tests** - Comprehensive test coverage
 - **Integration Tests** - API and repository tests
 - **React Integration** - TypeScript API service files
+
+### 🔧 **Field Management (NEW!)**
+- **Add Fields** - Add new fields to existing services
+- **Update Fields** - Modify field properties and validation
+- **Remove Fields** - Safely remove deprecated fields
+- **Impact Analysis** - Preview changes before applying
+- **Backup & Rollback** - Automatic backup with restore capability
+- **Validation Engine** - Comprehensive safety checks
 
 ### 🔒 **Security & Validation**
 - Input sanitization for XSS protection
@@ -118,6 +129,45 @@ python generator.py --verbose
 ### 4. **Deploy**
 Commit the generated files and deploy to Railway or your platform!
 
+## 🔧 **Field Management**
+
+### **Modify Existing Services**
+You can now add, update, or remove fields from existing services:
+
+```bash
+# Add new fields to finance service
+python generator.py --definition examples/field_modifications/add_fields_finance.json
+
+# Update and remove fields from blog service  
+python generator.py --definition examples/field_modifications/update_remove_blog.json
+
+# Preview changes without applying (dry run)
+python generator.py --definition field_operations.json --dry-run
+```
+
+### **Complete Workflow**
+1. **Impact Analysis** - Shows exactly what will change
+2. **User Confirmation** - Interactive prompts with safety warnings
+3. **Automatic Backup** - All files backed up before modifications
+4. **File Updates** - Models, DTOs, Services, Repositories updated
+5. **Migration Generation** - SQL ALTER TABLE statements created
+6. **Test Updates** - Test files updated for new fields
+7. **React Integration** - TypeScript interfaces generated
+8. **Verification** - Ensures all changes applied correctly
+
+### **Field Operation Types**
+- **Add**: Add new fields with validation and constraints
+- **Update**: Modify existing field properties (type, validation, etc.)
+- **Remove**: Safely remove deprecated fields with confirmation
+
+### **Safety Features**
+- **Validation Engine**: Prevents unsafe operations (can't remove primary keys)
+- **Dependency Checking**: Scans codebase for field references
+- **Impact Analysis**: Preview all changes before applying
+- **Automatic Backup**: All files backed up before changes
+- **Rollback Support**: Restore from backup if operations fail
+- **Confirmation Prompts**: User approval for destructive changes
+
 ## 📦 Installation
 
 ### Option 1: Python Installation
@@ -148,14 +198,19 @@ Download `generator.exe` and double-click to run - no Python installation needed
 ### Basic Usage
 
 ```bash
-# Generate with default config
+# Generate new service with default config
 python generator.py
 
-# Specify custom files
+# Generate with custom files
 python generator.py --config my_config.json --definition blog_service.json
 
 # Enable detailed logging
 python generator.py --verbose
+
+# Field Management Operations
+python generator.py --definition field_operations.json
+python generator.py --definition field_operations.json --dry-run
+python generator.py --definition field_operations.json --verbose
 ```
 
 ### Step-by-Step Process
@@ -329,6 +384,82 @@ python generator.py --verbose
 | `DATE` | `LocalDate` | future, past |
 | `BOOLEAN` | `Boolean` | required |
 
+## 📝 **Field Operations Format**
+
+### **Field Modification JSON Structure**
+
+```json
+{
+  "operation_type": "modify_service",
+  "target_service": {
+    "name": "service_name",
+    "table": "table_name",
+    "entity": "EntityName"
+  },
+  "field_operations": [
+    {
+      "action": "add|update|remove",
+      "field": { /* field definition for add */ },
+      "field_name": "existing_field",  // for update/remove
+      "changes": { /* changes for update */ },
+      "reason": "explanation text"
+    }
+  ],
+  "options": {
+    "dry_run": false,
+    "backup_enabled": true,
+    "auto_confirm": false
+  }
+}
+```
+
+### **Field Operation Examples**
+
+#### **Add Field**
+```json
+{
+  "action": "add",
+  "field": {
+    "name": "new_field",
+    "type": "VARCHAR(100)",
+    "javaType": "String",
+    "nullable": true,
+    "validation": {
+      "maxLength": 100,
+      "sanitize": true
+    },
+    "description": "Description of the new field",
+    "default_value": "NULL"
+  }
+}
+```
+
+#### **Update Field**
+```json
+{
+  "action": "update",
+  "field_name": "existing_field",
+  "changes": {
+    "type": "VARCHAR(255)",
+    "validation": {
+      "maxLength": 255,
+      "required": true
+    }
+  },
+  "reason": "Increase field length limit"
+}
+```
+
+#### **Remove Field**
+```json
+{
+  "action": "remove",
+  "field_name": "deprecated_field",
+  "confirm_removal": true,
+  "reason": "Field no longer needed"
+}
+```
+
 ### Validation Rules
 
 ```json
@@ -347,6 +478,75 @@ python generator.py --verbose
   }
 }
 ```
+
+## 🧪 **Testing**
+
+### **Test Field Management**
+
+Run the comprehensive test suite to validate field management functionality:
+
+```bash
+# Run all tests
+cd utilities
+python test_field_management.py
+
+# Expected output:
+# 🚀 Starting Comprehensive Field Management Test
+# ============================================================
+# 🧪 Testing JSON validation...
+# ✅ Valid JSON created for testing
+# 🧪 Testing backup functionality...
+# ✅ Mock project structure created
+# 🧪 Testing impact analysis...
+# ✅ Impact analysis completed
+# 🧪 Testing Java file parser...
+# ✅ Java file parsing successful
+# 🧪 Testing template rendering...
+# ✅ Templates found: 1
+# 🧪 Testing dry run mode...
+# ✅ Dry run mode test setup complete
+# 
+# ============================================================
+# 📊 TEST RESULTS SUMMARY
+# ============================================================
+# Json Validation          ✅ PASS
+# Backup Functionality     ✅ PASS
+# Dry Run Mode             ✅ PASS
+# Impact Analysis          ✅ PASS
+# File Parser              ✅ PASS
+# Template Rendering       ✅ PASS
+# ============================================================
+# Overall: 6/6 tests passed (100.0%)
+# 🎉 ALL TESTS PASSED! Field management is ready for use.
+```
+
+### **Manual Testing**
+
+Test field operations manually:
+
+```bash
+# 1. Test dry run mode
+python generator.py --definition examples/field_modifications/add_fields_finance.json --dry-run
+
+# 2. Test actual field addition (on a backup copy)
+python generator.py --definition examples/field_modifications/simple_add_inventory.json
+
+# 3. Test field updates and removals
+python generator.py --definition examples/field_modifications/update_remove_blog.json
+```
+
+### **Testing Checklist**
+
+Before using in production:
+
+- [ ] Test dry run mode works correctly
+- [ ] Verify backup and restore functionality
+- [ ] Test impact analysis accuracy
+- [ ] Validate generated migration SQL
+- [ ] Check Java file parsing and updates
+- [ ] Test validation engine safety checks
+- [ ] Verify rollback functionality
+- [ ] Test with various field types and operations
 
 ## 📚 Examples
 

@@ -511,37 +511,102 @@ class ViraCodeGenerator:
         return type_mapping.get(base_type, 'String')
 
 
+def detect_operation_type(definition_file: str) -> str:
+    """
+    Detect the operation type from the definition file.
+    
+    Args:
+        definition_file: Path to the definition file
+        
+    Returns:
+        Operation type: 'create_service' or 'modify_service'
+    """
+    try:
+        with open(definition_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        return data.get('operation_type', 'create_service')
+    except Exception:
+        return 'create_service'  # Default to create service
+
+
 @click.command()
 @click.option('--config', '-c', default='config.json', help='Configuration file path')
 @click.option('--definition', '-d', default='service_definition.json', help='Service definition file path')
+@click.option('--operation', '-o', help='Operation type: create_service or modify_service (auto-detected if not specified)')
+@click.option('--dry-run', is_flag=True, help='Show what would be changed without applying')
 @click.option('--verbose', '-v', is_flag=True, help='Enable verbose logging')
-def main(config: str, definition: str, verbose: bool):
+def main(config: str, definition: str, operation: str, dry_run: bool, verbose: bool):
     """
     Vira Services Code Generator
     
     Generate complete Spring Boot services with CRUD operations, tests, and React integration.
+    Also supports field modification operations for existing services.
     """
     try:
-        # Create generator instance
-        generator = ViraCodeGenerator(config)
+        # Detect operation type if not specified
+        if not operation:
+            operation = detect_operation_type(definition)
         
-        # Set verbose logging if requested
-        if verbose:
-            generator.logger.setLevel(logging.DEBUG)
+        if operation == 'modify_service':
+            # Import field modifier (lazy import to avoid circular dependencies)
+            from field_modifier import FieldModifier
+            
+            # Create field modifier
+            modifier = FieldModifier(config)
+            
+            # Set verbose logging if requested
+            if verbose:
+                modifier.logger.setLevel(logging.DEBUG)
+            
+            # Override dry-run if specified
+            if dry_run:
+                with open(definition, 'r') as f:
+                    ops_data = json.load(f)
+                ops_data.setdefault('options', {})['dry_run'] = True
+                
+                temp_file = definition + ".tmp"
+                with open(temp_file, 'w') as f:
+                    json.dump(ops_data, f, indent=2)
+                
+                definition = temp_file
+            
+            # Process field operations
+            success = modifier.process_field_operations(definition)
+            
+            # Clean up temp file
+            if dry_run and definition.endswith('.tmp'):
+                Path(definition).unlink()
+            
+            if success:
+                print("\n🎉 Field modification completed successfully!")
+                print("🚀 Your service modifications are ready!")
+                sys.exit(0)
+            else:
+                print("\n❌ Field modification failed. Check logs for details.")
+                sys.exit(1)
         
-        # Load service definition
-        generator.load_service_definition(definition)
-        
-        # Generate code
-        success = generator.generate_code()
-        
-        if success:
-            print("\n🎉 Code generation completed successfully!")
-            print("🚀 Your service is ready for deployment!")
-            sys.exit(0)
         else:
-            print("\n❌ Code generation failed. Check logs for details.")
-            sys.exit(1)
+            # Create generator instance for service creation
+            generator = ViraCodeGenerator(config)
+            
+            # Set verbose logging if requested
+            if verbose:
+                generator.logger.setLevel(logging.DEBUG)
+            
+            # Load service definition
+            generator.load_service_definition(definition)
+            
+            # Generate code
+            success = generator.generate_code()
+            
+            if success:
+                print("\n🎉 Code generation completed successfully!")
+                print("🚀 Your service is ready for deployment!")
+                sys.exit(0)
+            else:
+                print("\n❌ Code generation failed. Check logs for details.")
+                sys.exit(1)
             
     except Exception as e:
         print(f"\n💥 Fatal error: {str(e)}")

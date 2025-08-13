@@ -1,0 +1,172 @@
+-- Migration: {{ migration_version }}__Update_{{ service_name }}_{{ table_name }}_fields.sql
+-- Description: Field modifications for {{ service_description }}
+-- Service: {{ service_name | title }}
+-- Operations: {{ operations_summary }}
+-- Generated: {{ generation_date }}
+-- Author: Vira Code Generator
+
+{% if add_operations %}
+-- ===================
+-- ADD NEW FIELDS
+-- ===================
+{% for operation in add_operations %}
+-- Add field: {{ operation.field.name }}
+-- Description: {{ operation.field.description }}
+ALTER TABLE {{ table_name }} 
+ADD COLUMN {{ operation.field.name }} {{ operation.field.type }}
+{%- if not operation.field.nullable %} NOT NULL{% endif -%}
+{%- if operation.field.default_value and operation.field.default_value != 'NULL' %} DEFAULT {{ operation.field.default_value }}{% endif %};
+
+{% if operation.field.description -%}
+COMMENT ON COLUMN {{ table_name }}.{{ operation.field.name }} IS '{{ operation.field.description }}';
+{% endif %}
+
+{% if operation.field.javaType == 'String' and operation.field.validation and operation.field.validation.maxLength and operation.field.validation.maxLength <= 255 -%}
+-- Index for searchable string field
+CREATE INDEX idx_{{ table_name }}_{{ operation.field.name }} ON {{ table_name }}({{ operation.field.name }});
+{% endif %}
+
+{% if operation.field.foreignKey -%}
+-- Foreign key constraint for {{ operation.field.name }}
+ALTER TABLE {{ table_name }} 
+ADD CONSTRAINT fk_{{ table_name }}_{{ operation.field.name }} 
+FOREIGN KEY ({{ operation.field.name }}) 
+REFERENCES {{ operation.field.foreignKey.table }}({{ operation.field.foreignKey.field }})
+{%- if operation.field.foreignKey.onDelete %} ON DELETE {{ operation.field.foreignKey.onDelete }}{% endif %};
+
+-- Index for foreign key
+CREATE INDEX idx_{{ table_name }}_{{ operation.field.name }}_fk ON {{ table_name }}({{ operation.field.name }});
+{% endif %}
+
+{% endfor %}
+{% endif %}
+
+{% if update_operations %}
+-- ===================
+-- UPDATE EXISTING FIELDS
+-- ===================
+{% for operation in update_operations %}
+-- Update field: {{ operation.field_name }}
+{% if operation.reason -%}
+-- Reason: {{ operation.reason }}
+{% endif %}
+
+{% if operation.changes.type -%}
+-- Change field type
+ALTER TABLE {{ table_name }} 
+ALTER COLUMN {{ operation.field_name }} TYPE {{ operation.changes.type }};
+{% endif %}
+
+{% if operation.changes.nullable is defined -%}
+{% if operation.changes.nullable -%}
+-- Allow NULL values
+ALTER TABLE {{ table_name }} 
+ALTER COLUMN {{ operation.field_name }} DROP NOT NULL;
+{% else -%}
+-- Require NOT NULL values
+ALTER TABLE {{ table_name }} 
+ALTER COLUMN {{ operation.field_name }} SET NOT NULL;
+{% endif %}
+{% endif %}
+
+{% if operation.changes.default_value -%}
+-- Set default value
+ALTER TABLE {{ table_name }} 
+ALTER COLUMN {{ operation.field_name }} SET DEFAULT {{ operation.changes.default_value }};
+{% endif %}
+
+{% endfor %}
+{% endif %}
+
+{% if remove_operations %}
+-- ===================
+-- REMOVE DEPRECATED FIELDS
+-- ===================
+-- WARNING: These operations are commented out and require manual confirmation
+--          Uncomment and run manually after verifying data impact
+
+{% for operation in remove_operations %}
+-- Remove field: {{ operation.field_name }}
+{% if operation.reason -%}
+-- Reason: {{ operation.reason }}
+{% endif %}
+-- ALTER TABLE {{ table_name }} DROP COLUMN {{ operation.field_name }};
+
+{% endfor %}
+
+-- NOTE: Field removal operations are disabled by default to prevent data loss.
+--       Review the impact carefully and uncomment the statements above if you're sure.
+{% endif %}
+
+{% if add_operations %}
+-- ===================
+-- UPDATE TRIGGERS AND FUNCTIONS
+-- ===================
+
+-- Ensure updated_at trigger exists and works with new fields
+{% if fields_with_updated_at %}
+CREATE OR REPLACE FUNCTION update_{{ table_name }}_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Recreate trigger to ensure it works with schema changes
+DROP TRIGGER IF EXISTS trigger_{{ table_name }}_updated_at ON {{ table_name }};
+CREATE TRIGGER trigger_{{ table_name }}_updated_at
+    BEFORE UPDATE ON {{ table_name }}
+    FOR EACH ROW
+    EXECUTE FUNCTION update_{{ table_name }}_updated_at();
+{% endif %}
+{% endif %}
+
+-- ===================
+-- VERIFICATION QUERIES
+-- ===================
+
+-- Verify table structure after migration
+SELECT 
+    column_name,
+    data_type,
+    is_nullable,
+    column_default,
+    character_maximum_length
+FROM information_schema.columns 
+WHERE table_name = '{{ table_name }}'
+ORDER BY ordinal_position;
+
+-- Check for any constraint violations
+-- Run this after migration to ensure data integrity
+SELECT 
+    COUNT(*) as total_rows,
+    {% for operation in add_operations -%}
+    {% if not operation.field.nullable -%}
+    COUNT({{ operation.field.name }}) as {{ operation.field.name }}_not_null,
+    {% endif -%}
+    {% endfor -%}
+    'Migration verification' as status
+FROM {{ table_name }};
+
+-- Performance check - ensure indexes are being used
+-- EXPLAIN ANALYZE SELECT * FROM {{ table_name }} WHERE id = 1;
+
+-- ===================
+-- ROLLBACK INFORMATION
+-- ===================
+-- If you need to rollback this migration, use the following statements:
+--
+{% for operation in add_operations -%}
+-- ALTER TABLE {{ table_name }} DROP COLUMN {{ operation.field.name }};
+{% endfor %}
+{% for operation in update_operations -%}
+-- -- Reverse changes to {{ operation.field_name }} (manual adjustment required)
+{% endfor %}
+
+-- Migration completed: {{ migration_version }}__Update_{{ service_name }}_{{ table_name }}_fields.sql
+-- Next steps:
+-- 1. Verify all data integrity constraints
+-- 2. Update application code to use new fields
+-- 3. Test thoroughly in development environment
+-- 4. Deploy to production when ready 

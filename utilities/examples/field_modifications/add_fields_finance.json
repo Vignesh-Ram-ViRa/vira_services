@@ -1,0 +1,88 @@
+{
+  "operation_type": "modify_service",
+  "target_service": {
+    "name": "finance",
+    "table": "finance_transactions",
+    "entity": "Transaction"
+  },
+  "field_operations": [
+    {
+      "action": "add",
+      "field": {
+        "name": "receipt_url",
+        "type": "VARCHAR(500)",
+        "javaType": "String",
+        "nullable": true,
+        "validation": {
+          "maxLength": 500
+        },
+        "description": "URL to receipt image or document",
+        "default_value": "NULL"
+      }
+    },
+    {
+      "action": "add",
+      "field": {
+        "name": "is_recurring",
+        "type": "BOOLEAN",
+        "javaType": "Boolean",
+        "nullable": false,
+        "validation": {
+          "required": true
+        },
+        "description": "Whether this is a recurring transaction",
+        "default_value": "false"
+      }
+    },
+    {
+      "action": "add",
+      "field": {
+        "name": "payment_method",
+        "type": "VARCHAR(50)",
+        "javaType": "String",
+        "nullable": false,
+        "validation": {
+          "required": true,
+          "maxLength": 50,
+          "sanitize": true
+        },
+        "description": "Payment method used (cash, card, bank_transfer, etc.)",
+        "default_value": "'cash'"
+      }
+    },
+    {
+      "action": "add",
+      "field": {
+        "name": "reference_number",
+        "type": "VARCHAR(100)",
+        "javaType": "String",
+        "nullable": true,
+        "validation": {
+          "maxLength": 100
+        },
+        "description": "Transaction reference number from bank or payment provider",
+        "default_value": "NULL"
+      }
+    },
+    {
+      "action": "add",
+      "field": {
+        "name": "tags",
+        "type": "VARCHAR(500)",
+        "javaType": "String",
+        "nullable": true,
+        "validation": {
+          "maxLength": 500,
+          "sanitize": true
+        },
+        "description": "Comma-separated tags for categorization",
+        "default_value": "NULL"
+      }
+    }
+  ],
+  "options": {
+    "dry_run": false,
+    "backup_enabled": true,
+    "auto_confirm": false
+  }
+} 
